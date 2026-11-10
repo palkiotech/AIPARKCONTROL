@@ -28,9 +28,12 @@
           P
         </div>
         <div>
-          <h1 class="text-sm md:text-base font-bold leading-tight">ParkControl</h1>
+          <h1 class="text-sm md:text-base font-bold leading-tight">
+            {{ authStore.isSuperadmin ? 'ParkControl · Superadmin' : (authStore.parqueadero?.nombre || 'ParkControl') }}
+          </h1>
           <p class="text-xs text-text-muted flex items-center space-x-1">
-            <span>Turno activo: Turno #1</span>
+            <span v-if="!authStore.isSuperadmin">Turno: Activo</span>
+            <span v-else>Plataforma SaaS</span>
           </p>
         </div>
       </div>
@@ -58,6 +61,17 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
         </button>
+
+        <!-- Botón Salir (HU-02) -->
+        <button 
+          @click="handleLogout"
+          class="p-1.5 rounded-lg border border-border bg-surface text-danger hover:bg-danger-bg transition-colors"
+          title="Cerrar sesión"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -65,41 +79,57 @@
     <div class="flex-1 flex overflow-hidden">
       <!-- Navegación lateral en escritorio (md+) -->
       <aside class="hidden md:flex flex-col w-60 bg-surface border-r border-border p-4 space-y-1">
-        <router-link 
-          to="/" 
-          class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
-          :class="$route.name === 'dashboard' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
-        >
-          Inicio / Dashboard
-        </router-link>
-        <router-link 
-          to="/ocupacion" 
-          class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
-          :class="$route.name === 'ocupacion' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
-        >
-          Ocupación
-        </router-link>
-        <router-link 
-          to="/mensualidades" 
-          class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
-          :class="$route.name === 'mensualidades' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
-        >
-          Mensualidades
-        </router-link>
-        <router-link 
-          to="/caja" 
-          class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
-          :class="$route.name === 'caja' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
-        >
-          Caja y Turno
-        </router-link>
-        <router-link 
-          to="/ajustes" 
-          class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
-          :class="$route.name === 'ajustes' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
-        >
-          Ajustes
-        </router-link>
+        <!-- Opciones para Superadmin -->
+        <template v-if="authStore.isSuperadmin">
+          <router-link 
+            to="/superadmin" 
+            class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+            :class="$route.name === 'superadmin' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+          >
+            Parqueaderos
+          </router-link>
+        </template>
+
+        <!-- Opciones para Admin y Operador -->
+        <template v-else>
+          <router-link 
+            v-if="authStore.isAdmin"
+            to="/" 
+            class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+            :class="$route.name === 'dashboard' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+          >
+            Inicio / Dashboard
+          </router-link>
+          <router-link 
+            to="/ocupacion" 
+            class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+            :class="$route.name === 'ocupacion' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+          >
+            Ocupación
+          </router-link>
+          <router-link 
+            to="/mensualidades" 
+            class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+            :class="$route.name === 'mensualidades' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+          >
+            Mensualidades
+          </router-link>
+          <router-link 
+            to="/caja" 
+            class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+            :class="$route.name === 'caja' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+          >
+            Caja y Turno
+          </router-link>
+          <router-link 
+            v-if="authStore.isAdmin"
+            to="/ajustes" 
+            class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+            :class="$route.name === 'ajustes' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+          >
+            Ajustes
+          </router-link>
+        </template>
       </aside>
 
       <!-- Área de contenido con scroll -->
@@ -110,54 +140,77 @@
 
     <!-- Barra de Navegación Inferior en Móvil (< md) -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border px-2 py-1.5 flex justify-around items-center z-30 shadow-lg">
-      <router-link 
-        to="/" 
-        class="flex flex-col items-center py-1 px-2 text-xs"
-        :class="$route.name === 'dashboard' ? 'text-primary font-bold' : 'text-text-muted'"
-      >
-        <span>Inicio</span>
-      </router-link>
-      <router-link 
-        to="/ocupacion" 
-        class="flex flex-col items-center py-1 px-2 text-xs"
-        :class="$route.name === 'ocupacion' ? 'text-primary font-bold' : 'text-text-muted'"
-      >
-        <span>Ocupación</span>
-      </router-link>
-      <router-link 
-        to="/mensualidades" 
-        class="flex flex-col items-center py-1 px-2 text-xs"
-        :class="$route.name === 'mensualidades' ? 'text-primary font-bold' : 'text-text-muted'"
-      >
-        <span>Mensuales</span>
-      </router-link>
-      <router-link 
-        to="/caja" 
-        class="flex flex-col items-center py-1 px-2 text-xs"
-        :class="$route.name === 'caja' ? 'text-primary font-bold' : 'text-text-muted'"
-      >
-        <span>Caja</span>
-      </router-link>
-      <router-link 
-        to="/ajustes" 
-        class="flex flex-col items-center py-1 px-2 text-xs"
-        :class="$route.name === 'ajustes' ? 'text-primary font-bold' : 'text-text-muted'"
-      >
-        <span>Ajustes</span>
-      </router-link>
+      <template v-if="authStore.isSuperadmin">
+        <router-link 
+          to="/superadmin" 
+          class="flex flex-col items-center py-1 px-2 text-xs"
+          :class="$route.name === 'superadmin' ? 'text-primary font-bold' : 'text-text-muted'"
+        >
+          <span>Parqueaderos</span>
+        </router-link>
+      </template>
+
+      <template v-else>
+        <router-link 
+          v-if="authStore.isAdmin"
+          to="/" 
+          class="flex flex-col items-center py-1 px-2 text-xs"
+          :class="$route.name === 'dashboard' ? 'text-primary font-bold' : 'text-text-muted'"
+        >
+          <span>Inicio</span>
+        </router-link>
+        <router-link 
+          to="/ocupacion" 
+          class="flex flex-col items-center py-1 px-2 text-xs"
+          :class="$route.name === 'ocupacion' ? 'text-primary font-bold' : 'text-text-muted'"
+        >
+          <span>Ocupación</span>
+        </router-link>
+        <router-link 
+          to="/mensualidades" 
+          class="flex flex-col items-center py-1 px-2 text-xs"
+          :class="$route.name === 'mensualidades' ? 'text-primary font-bold' : 'text-text-muted'"
+        >
+          <span>Mensuales</span>
+        </router-link>
+        <router-link 
+          to="/caja" 
+          class="flex flex-col items-center py-1 px-2 text-xs"
+          :class="$route.name === 'caja' ? 'text-primary font-bold' : 'text-text-muted'"
+        >
+          <span>Caja</span>
+        </router-link>
+        <router-link 
+          v-if="authStore.isAdmin"
+          to="/ajustes" 
+          class="flex flex-col items-center py-1 px-2 text-xs"
+          :class="$route.name === 'ajustes' ? 'text-primary font-bold' : 'text-text-muted'"
+        >
+          <span>Ajustes</span>
+        </router-link>
+      </template>
     </nav>
   </div>
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
 import { useTemaStore } from '@/stores/tema'
 import { useConexionStore } from '@/stores/conexion'
+import { useAuthStore } from '@/stores/auth'
 
+const router = useRouter()
 const temaStore = useTemaStore()
 const conexionStore = useConexionStore()
+const authStore = useAuthStore()
 
 function toggleTheme() {
   const next = temaStore.isDark ? 'light' : 'dark'
   temaStore.setTheme(next)
+}
+
+async function handleLogout() {
+  await authStore.logout()
+  router.push('/login')
 }
 </script>
