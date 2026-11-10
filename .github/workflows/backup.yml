@@ -1,0 +1,32 @@
+name: Supabase Backup Semanal
+
+on:
+  schedule:
+    # Corre todos los domingos a las 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch: # Permite disparo manual
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Realizar volcado de base de datos
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f backup.sql
+
+      - name: Almacenar respaldo como artefacto privado
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_id }}
+          path: backup.sql
+          retention-days: 90

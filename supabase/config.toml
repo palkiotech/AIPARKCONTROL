@@ -1,0 +1,13 @@
+project_id = "parkcontrol"
+
+[api]
+port = 54321
+
+[db]
+port = 54322
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["https://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = false

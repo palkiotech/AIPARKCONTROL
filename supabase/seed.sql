@@ -1,0 +1,2 @@
+-- Datos de prueba para desarrollo local
+-- Se poblarán en sprints posteriores conforme avancemos en el modelo de datos.
