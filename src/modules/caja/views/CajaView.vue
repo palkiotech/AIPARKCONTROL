@@ -206,9 +206,20 @@ function formatearHora(iso) {
 
 async function cargarTurno() {
   const pqId = authStore.parqueaderoId
-  cargando.value = true
+  const cached = cajaService.obtenerTurnoCache()
+  
+  if (cached) {
+    turnoActual.value = cached
+    formRecibir.value.efectivo = cached.efectivo_contado || cached.efectivo_esperado || 0
+    formEntrega.value.efectivo = cached.efectivo_esperado || 0
+    cargando.value = false
+  } else {
+    cargando.value = true
+  }
+
   try {
-    turnoActual.value = await cajaService.obtenerTurnoActual(pqId)
+    const fresh = await cajaService.obtenerTurnoActual(pqId)
+    turnoActual.value = fresh
     if (turnoActual.value) {
       formRecibir.value.efectivo = turnoActual.value.efectivo_contado || turnoActual.value.efectivo_esperado || 0
       formEntrega.value.efectivo = turnoActual.value.efectivo_esperado || 0

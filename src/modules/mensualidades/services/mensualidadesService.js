@@ -49,7 +49,16 @@ const mensualidadesLocales = [
   }
 ]
 
+let cacheMensualidades = null
+
 export const mensualidadesService = {
+  /**
+   * Obtiene las mensualidades en caché para renderizado instantáneo (0ms)
+   */
+  obtenerMensualidadesCache() {
+    return cacheMensualidades
+  },
+
   /**
    * Lista todas las mensualidades y clasifica su estado según el semáforo (HU-17)
    */
@@ -66,7 +75,7 @@ export const mensualidadesService = {
           .order('fecha_fin', { ascending: true })
 
         if (!error && data && data.length) {
-          return data.map(m => {
+          const resultado = data.map(m => {
             const clasificacion = clasificarEstadoMensualidad({
               fechaFin: m.fecha_fin,
               diasAviso: 5,
@@ -80,6 +89,8 @@ export const mensualidadesService = {
               ultimoAviso
             }
           })
+          cacheMensualidades = resultado
+          return resultado
         }
       } catch (e) {
         console.warn('Error cargando mensualidades desde Supabase, usando datos de prueba:', e)
@@ -87,7 +98,7 @@ export const mensualidadesService = {
     }
 
     // Datos de prueba activos para evaluación y demostración
-    return mensualidadesLocales.map(m => {
+    const fallback = mensualidadesLocales.map(m => {
       const clasificacion = clasificarEstadoMensualidad({
         fechaFin: m.fecha_fin,
         diasAviso: 5,
@@ -101,6 +112,8 @@ export const mensualidadesService = {
         ultimoAviso
       }
     })
+    cacheMensualidades = fallback
+    return fallback
   },
 
   /**

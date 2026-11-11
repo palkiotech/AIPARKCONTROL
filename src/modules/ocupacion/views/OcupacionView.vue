@@ -415,7 +415,16 @@ function verificarSobrecupo(tipoId) {
 
 async function cargarDatos() {
   const pqId = authStore.parqueaderoId
-  cargando.value = true
+  const cachedVehiculos = ocupacionService.obtenerVehiculosDentroCache()
+  
+  // Renderizado instantáneo (0ms) si ya hay datos en memoria
+  if (cachedVehiculos) {
+    vehiculosDentro.value = cachedVehiculos
+    cargando.value = false
+  } else {
+    cargando.value = true
+  }
+
   try {
     const [dentro, tipos, metodos] = await Promise.all([
       ocupacionService.obtenerVehiculosDentro(pqId),

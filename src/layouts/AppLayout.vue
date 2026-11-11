@@ -167,9 +167,13 @@
         </template>
       </aside>
 
-      <!-- Área de contenido con scroll -->
+      <!-- Área de contenido con scroll con KeepAlive para navegación ultra rápida (0ms) -->
       <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <keep-alive>
+            <component :is="Component" :key="$route.name" />
+          </keep-alive>
+        </router-view>
       </main>
     </div>
 
@@ -251,6 +255,10 @@ import { useTemaStore } from '@/stores/tema'
 import { useConexionStore } from '@/stores/conexion'
 import { useAuthStore } from '@/stores/auth'
 import { cajaService } from '@/modules/caja/services/cajaService'
+import { ocupacionService } from '@/modules/ocupacion/services/ocupacionService'
+import { mensualidadesService } from '@/modules/mensualidades/services/mensualidadesService'
+import { ajustesService } from '@/modules/ajustes/services/ajustesService'
+import { dashboardService } from '@/modules/dashboard/services/dashboardService'
 import { sincronizarAhora } from '@/offline/sync'
 
 const router = useRouter()
@@ -262,6 +270,21 @@ const authStore = useAuthStore()
 const sincronizandoManual = ref(false)
 const tieneTurnoAbierto = ref(false)
 
+async function precalentarDatos(pqId) {
+  if (!pqId || authStore.isSuperadmin) return
+  // Precarga paralela en segundo plano: las vistas ya estarán en memoria antes de que el usuario haga clic
+  Promise.allSettled([
+    ajustesService.listarTiposVehiculo(pqId),
+    ajustesService.listarMetodosPago(pqId),
+    ajustesService.listarTarifas(pqId),
+    ajustesService.listarPlanesMensuales(pqId),
+    ocupacionService.obtenerVehiculosDentro(pqId),
+    cajaService.obtenerTurnoActual(pqId),
+    mensualidadesService.listarMensualidades(pqId),
+    dashboardService.obtenerDatosDashboard(pqId)
+  ])
+}
+
 async function verificarTurno() {
   if (authStore.parqueaderoId && !authStore.isSuperadmin) {
     const turno = await cajaService.obtenerTurnoActual(authStore.parqueaderoId)
@@ -269,12 +292,22 @@ async function verificarTurno() {
   }
 }
 
-watch(() => [route.path, authStore.parqueaderoId], () => {
+watch(() => authStore.parqueaderoId, (newId) => {
+  if (newId) {
+    verificarTurno()
+    precalentarDatos(newId)
+  }
+})
+
+watch(() => route.path, () => {
   verificarTurno()
 })
 
 onMounted(() => {
   verificarTurno()
+  if (authStore.parqueaderoId) {
+    precalentarDatos(authStore.parqueaderoId)
+  }
 })
 
 function toggleTheme() {

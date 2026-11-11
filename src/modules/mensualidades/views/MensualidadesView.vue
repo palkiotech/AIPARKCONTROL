@@ -438,7 +438,16 @@ function formatearHora(iso) {
 
 async function cargarTodo() {
   const pqId = authStore.parqueaderoId
-  cargando.value = true
+  const cached = mensualidadesService.obtenerMensualidadesCache()
+
+  // Si ya tenemos datos en memoria, mostramos de inmediato sin pantalla de carga (0ms)
+  if (cached && cached.length) {
+    mensualidades.value = cached
+    cargando.value = false
+  } else {
+    cargando.value = true
+  }
+
   try {
     const [lista, planes, metodos, tipos] = await Promise.all([
       mensualidadesService.listarMensualidades(pqId),

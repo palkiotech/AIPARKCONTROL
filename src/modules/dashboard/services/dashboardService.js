@@ -2,7 +2,16 @@ import { mensualidadesService } from '@/modules/mensualidades/services/mensualid
 import { ocupacionService } from '@/modules/ocupacion/services/ocupacionService'
 import { cajaService } from '@/modules/caja/services/cajaService'
 
+let cacheDashboard = null
+
 export const dashboardService = {
+  /**
+   * Retorna los datos agregados en caché para renderizado instantáneo (0ms)
+   */
+  obtenerDashboardCache() {
+    return cacheDashboard
+  },
+
   /**
    * Obtiene la información agregada para el Dashboard principal (HU-23)
    */
@@ -48,11 +57,13 @@ export const dashboardService = {
       porCobrarProximos7Dias: semaforo.amarillo.valor + semaforo.rojo.valor
     }
 
-    return {
+    const resultado = {
       semaforo,
       clientesAvisar,
       ocupacionCount: dentro.length,
       ingresos
     }
+    cacheDashboard = resultado
+    return resultado
   }
 }

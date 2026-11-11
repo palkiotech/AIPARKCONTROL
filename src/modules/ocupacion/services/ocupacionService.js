@@ -5,8 +5,16 @@ import { encolarOperacion } from '@/offline/cola'
 
 // Caché reactivo en memoria local para renderizado inmediato
 const patioLocal = []
+let cacheVehiculos = null
 
 export const ocupacionService = {
+  /**
+   * Retorna los vehículos actualmente en caché de memoria para renderizado instantáneo (0ms)
+   */
+  obtenerVehiculosDentroCache() {
+    return cacheVehiculos
+  },
+
   /**
    * Registra la entrada de un vehículo en patio (HU-11)
    * Si no hay conexión, se encola en IndexedDB (HU-26)
@@ -33,6 +41,7 @@ export const ocupacionService = {
         estado: 'abierto'
       }
       patioLocal.unshift(entradaOffline)
+      if (cacheVehiculos) cacheVehiculos.unshift(entradaOffline)
       return { success: true, ...entradaOffline }
     }
 
@@ -69,6 +78,7 @@ export const ocupacionService = {
         estado: 'abierto'
       }
       patioLocal.unshift(entradaRespaldo)
+      if (cacheVehiculos) cacheVehiculos.unshift(entradaRespaldo)
       return { success: true, ...entradaRespaldo }
     }
   },
@@ -78,7 +88,9 @@ export const ocupacionService = {
    */
   async obtenerVehiculosDentro(parqueaderoId) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return patioLocal.filter(v => v.estado === 'abierto')
+      const resOffline = patioLocal.filter(v => v.estado === 'abierto')
+      cacheVehiculos = resOffline
+      return resOffline
     }
 
     try {
@@ -90,9 +102,13 @@ export const ocupacionService = {
         .order('entrada_at', { ascending: false })
 
       if (error) throw error
-      return data || []
+      const resultado = data || []
+      cacheVehiculos = resultado
+      return resultado
     } catch (err) {
-      return patioLocal.filter(v => v.estado === 'abierto')
+      const fallback = patioLocal.filter(v => v.estado === 'abierto')
+      cacheVehiculos = fallback
+      return fallback
     }
   },
 
@@ -101,6 +117,10 @@ export const ocupacionService = {
    * Si no hay conexión, se encola en IndexedDB (HU-26)
    */
   async registrarSalida({ registroId, metodoPagoId, tarifaId, valorCobrado }) {
+    if (cacheVehiculos) {
+      cacheVehiculos = cacheVehiculos.filter(v => v.id !== registroId)
+    }
+
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       await encolarOperacion('salida', {
         registroId,
@@ -148,6 +168,9 @@ export const ocupacionService = {
    * Anula un registro con motivo justificado (HU-15)
    */
   async anularRegistro(registroId, motivo) {
+    if (cacheVehiculos) {
+      cacheVehiculos = cacheVehiculos.filter(v => v.id !== registroId)
+    }
     const { data, error } = await supabase.rpc('anular_registro', {
       p_registro_id: registroId,
       p_motivo: motivo.trim()

@@ -213,7 +213,15 @@ function formatVenceRelativo(c) {
 
 async function cargarDashboard() {
   const pqId = authStore.parqueaderoId
-  cargando.value = true
+  const cached = dashboardService.obtenerDashboardCache()
+  
+  if (cached) {
+    datos.value = cached
+    cargando.value = false
+  } else {
+    cargando.value = true
+  }
+
   try {
     datos.value = await dashboardService.obtenerDatosDashboard(pqId)
   } catch (err) {

@@ -10,7 +10,16 @@ let turnoLocalActivo = {
   movimientos: []
 }
 
+let cacheTurno = null
+
 export const cajaService = {
+  /**
+   * Obtiene el turno en memoria para renderizado instantáneo (0ms)
+   */
+  obtenerTurnoCache() {
+    return cacheTurno || turnoLocalActivo
+  },
+
   /**
    * Obtiene el turno actualmente abierto o por recibir (HU-24)
    */
@@ -18,6 +27,7 @@ export const cajaService = {
     if (!parqueaderoId) return null
 
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      cacheTurno = turnoLocalActivo
       return turnoLocalActivo
     }
 
@@ -30,8 +40,11 @@ export const cajaService = {
         .maybeSingle()
 
       if (error) throw error
-      return data || turnoLocalActivo
+      const resultado = data || turnoLocalActivo
+      cacheTurno = resultado
+      return resultado
     } catch (err) {
+      cacheTurno = turnoLocalActivo
       return turnoLocalActivo
     }
   },
