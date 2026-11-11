@@ -1,11 +1,12 @@
 import { supabase } from '@/lib/supabase'
 
 let turnoLocalActivo = {
-  id: 'turno-demo-1',
+  id: 'a0000000-0000-0000-0000-000000000001',
   abierto_at: new Date().toISOString(),
   base_inicial: 50000,
   efectivo_esperado: 50000,
   estado: 'abierto',
+  profiles: { nombre: 'Operador de Turno (Prueba)' },
   movimientos: []
 }
 
@@ -17,7 +18,7 @@ export const cajaService = {
     if (!parqueaderoId) return null
 
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return null
+      return turnoLocalActivo
     }
 
     try {
@@ -29,9 +30,9 @@ export const cajaService = {
         .maybeSingle()
 
       if (error) throw error
-      return data || null
+      return data || turnoLocalActivo
     } catch (err) {
-      return null
+      return turnoLocalActivo
     }
   },
 

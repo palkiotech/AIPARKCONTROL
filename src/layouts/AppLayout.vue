@@ -245,8 +245,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useTemaStore } from '@/stores/tema'
 import { useConexionStore } from '@/stores/conexion'
 import { useAuthStore } from '@/stores/auth'
@@ -254,6 +254,7 @@ import { cajaService } from '@/modules/caja/services/cajaService'
 import { sincronizarAhora } from '@/offline/sync'
 
 const router = useRouter()
+const route = useRoute()
 const temaStore = useTemaStore()
 const conexionStore = useConexionStore()
 const authStore = useAuthStore()
@@ -267,6 +268,10 @@ async function verificarTurno() {
     tieneTurnoAbierto.value = !!turno
   }
 }
+
+watch(() => [route.path, authStore.parqueaderoId], () => {
+  verificarTurno()
+})
 
 onMounted(() => {
   verificarTurno()
