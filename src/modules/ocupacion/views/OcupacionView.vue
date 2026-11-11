@@ -279,6 +279,57 @@
         </div>
       </div>
     </div>
+
+    <!-- MODAL DE COBRO EXITOSO Y COMPROBANTE (HU-20, HU-21) -->
+    <div v-if="modalExitoCobro" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div class="bg-surface rounded-2xl border border-border p-5 max-w-sm w-full shadow-2xl text-center space-y-4">
+        <div class="w-12 h-12 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+
+        <div>
+          <h3 class="text-base font-bold text-text-primary">¡Cobro Registrado!</h3>
+          <p class="text-xs text-text-secondary mt-1">
+            Placa: <strong class="text-text-primary font-mono text-sm">{{ modalExitoCobro.placa }}</strong>
+          </p>
+        </div>
+
+        <div class="bg-surface-elevated p-3 rounded-xl border border-border text-xs space-y-1">
+          <div class="flex justify-between">
+            <span class="text-text-secondary">Total Pagado:</span>
+            <span class="font-bold text-primary font-mono">${{ modalExitoCobro.valorTotal.toLocaleString() }}</span>
+          </div>
+          <div v-if="modalExitoCobro.vuelto > 0" class="flex justify-between text-success font-semibold">
+            <span>Cambio / Vuelto:</span>
+            <span class="font-mono">${{ modalExitoCobro.vuelto.toLocaleString() }}</span>
+          </div>
+          <div class="flex justify-between text-[11px] text-text-muted">
+            <span>Comprobante:</span>
+            <span class="font-mono font-bold">{{ modalExitoCobro.consecutivo ? '#' + modalExitoCobro.consecutivo : 'Provisional' }}</span>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-1">
+          <button 
+            @click="descargarComprobanteSalida"
+            class="w-full py-2.5 text-xs font-bold rounded-xl bg-primary text-white hover:opacity-90 shadow-md flex items-center justify-center space-x-1.5"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Descargar Comprobante PDF</span>
+          </button>
+          <button 
+            @click="modalExitoCobro = null"
+            class="w-full py-2 text-xs font-semibold rounded-xl border border-border text-text-secondary hover:bg-surface-elevated"
+          >
+            Finalizar y Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -287,6 +338,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { ocupacionService } from '@/modules/ocupacion/services/ocupacionService'
 import { ajustesService } from '@/modules/ajustes/services/ajustesService'
+import { comprobanteService } from '@/modules/comprobantes/services/comprobanteService'
 import { normalizarPlaca } from '@/utils/placa'
 import { calcularCobroBase } from '@/domain/cobro'
 
@@ -298,6 +350,7 @@ const guardandoSalida = ref(false)
 const mostrarModalEntrada = ref(false)
 const ticketGenerado = ref(null)
 const modalCobro = ref(null)
+const modalExitoCobro = ref(null)
 const mensajeExito = ref('')
 const errorMensaje = ref('')
 const filtroPlaca = ref('')
@@ -432,13 +485,45 @@ function abrirModalCobro(registro) {
 async function confirmarSalida() {
   if (!modalCobro.value) return
   guardandoSalida.value = true
+  const infoCobro = { ...modalCobro.value }
+
   try {
-    await ocupacionService.registrarSalida({
-      registroId: modalCobro.value.registro.id,
-      metodoPagoId: modalCobro.value.metodoPagoId,
-      valorCobrado: modalCobro.value.valorTotal
+    const resSalida = await ocupacionService.registrarSalida({
+      registroId: infoCobro.registro.id,
+      metodoPagoId: infoCobro.metodoPagoId,
+      valorCobrado: infoCobro.valorTotal
     })
-    mensajeExito.value = `Salida cobrada exitosamente: ${modalCobro.value.registro.placa} ($${modalCobro.value.valorTotal.toLocaleString()})`
+
+    // Generar consecutivo de comprobante (HU-20)
+    let consecutivo = null
+    try {
+      const resComp = await comprobanteService.crearComprobante({
+        origen: 'registro',
+        origenId: infoCobro.registro.id,
+        clienteNombre: 'Consumidor final'
+      })
+      if (resComp?.comprobante) {
+        consecutivo = resComp.comprobante.consecutivo
+      }
+    } catch (e) {
+      console.warn('Comprobante provisional:', e)
+    }
+
+    const metodoSel = metodosPagoDisponibles.value.find(m => m.id === infoCobro.metodoPagoId)
+
+    modalExitoCobro.value = {
+      placa: infoCobro.registro.placa,
+      tipoVehiculo: infoCobro.registro.tipos_vehiculo?.nombre || 'Vehículo',
+      entrada: infoCobro.registro.entrada_at,
+      salida: new Date().toISOString(),
+      minutos: infoCobro.minutos,
+      valorTotal: infoCobro.valorTotal,
+      vuelto: (infoCobro.pagaCon || 0) > infoCobro.valorTotal ? (infoCobro.pagaCon - infoCobro.valorTotal) : 0,
+      metodoPago: metodoSel?.nombre || 'Efectivo',
+      consecutivo
+    }
+
+    mensajeExito.value = `Salida cobrada exitosamente: ${infoCobro.registro.placa} ($${infoCobro.valorTotal.toLocaleString()})`
     modalCobro.value = null
     await cargarDatos()
   } catch (err) {
@@ -446,6 +531,33 @@ async function confirmarSalida() {
   } finally {
     guardandoSalida.value = false
   }
+}
+
+function descargarComprobanteSalida() {
+  if (!modalExitoCobro.value) return
+  const info = modalExitoCobro.value
+
+  const detalle = {
+    tipo: 'hora',
+    placa: info.placa,
+    tipoVehiculo: info.tipoVehiculo,
+    entrada: formatearHora(info.entrada),
+    salida: formatearHora(info.salida),
+    minutos: info.minutos,
+    metodoPago: info.metodoPago,
+    cajero: authStore.userProfile?.nombre_completo || 'Cajero'
+  }
+
+  comprobanteService.descargarPDF({
+    parqueadero: authStore.parqueadero,
+    comprobante: {
+      consecutivo: info.consecutivo,
+      cliente_nombre: 'Consumidor final',
+      valor: info.valorTotal
+    },
+    detalle,
+    esCopia: false
+  })
 }
 
 async function abrirModalAnular(v) {

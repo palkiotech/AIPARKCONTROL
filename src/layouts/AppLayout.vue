@@ -137,6 +137,22 @@
           </router-link>
           <router-link 
             v-if="authStore.isAdmin"
+            to="/comprobantes" 
+            class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+            :class="$route.name === 'comprobantes' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+          >
+            Comprobantes
+          </router-link>
+          <router-link 
+            v-if="authStore.isAdmin"
+            to="/reportes" 
+            class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
+            :class="$route.name === 'reportes' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+          >
+            Reportes
+          </router-link>
+          <router-link 
+            v-if="authStore.isAdmin"
             to="/ajustes" 
             class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
             :class="!conexionStore.isOnline ? 'opacity-50 pointer-events-none' : ($route.name === 'ajustes' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated')"
@@ -155,11 +171,11 @@
     </div>
 
     <!-- Barra de Navegación Inferior en Móvil (< md) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border px-2 py-1.5 flex justify-around items-center z-30 shadow-lg">
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border px-2 py-1.5 flex items-center overflow-x-auto no-scrollbar space-x-2 z-30 shadow-lg">
       <template v-if="authStore.isSuperadmin">
         <router-link 
           to="/superadmin" 
-          class="flex flex-col items-center py-1 px-2 text-xs"
+          class="flex flex-col items-center py-1 px-3 text-xs whitespace-nowrap flex-shrink-0"
           :class="$route.name === 'superadmin' ? 'text-primary font-bold' : 'text-text-muted'"
         >
           <span>Parqueaderos</span>
@@ -170,36 +186,52 @@
         <router-link 
           v-if="authStore.isAdmin"
           to="/" 
-          class="flex flex-col items-center py-1 px-2 text-xs"
+          class="flex flex-col items-center py-1 px-2 text-xs whitespace-nowrap flex-shrink-0"
           :class="$route.name === 'dashboard' ? 'text-primary font-bold' : 'text-text-muted'"
         >
           <span>Inicio</span>
         </router-link>
         <router-link 
           to="/ocupacion" 
-          class="flex flex-col items-center py-1 px-2 text-xs"
+          class="flex flex-col items-center py-1 px-2 text-xs whitespace-nowrap flex-shrink-0"
           :class="$route.name === 'ocupacion' ? 'text-primary font-bold' : 'text-text-muted'"
         >
           <span>Ocupación</span>
         </router-link>
         <router-link 
           to="/mensualidades" 
-          class="flex flex-col items-center py-1 px-2 text-xs"
+          class="flex flex-col items-center py-1 px-2 text-xs whitespace-nowrap flex-shrink-0"
           :class="$route.name === 'mensualidades' ? 'text-primary font-bold' : 'text-text-muted'"
         >
           <span>Mensuales</span>
         </router-link>
         <router-link 
           to="/caja" 
-          class="flex flex-col items-center py-1 px-2 text-xs"
+          class="flex flex-col items-center py-1 px-2 text-xs whitespace-nowrap flex-shrink-0"
           :class="$route.name === 'caja' ? 'text-primary font-bold' : 'text-text-muted'"
         >
           <span>Caja</span>
         </router-link>
         <router-link 
           v-if="authStore.isAdmin"
+          to="/comprobantes" 
+          class="flex flex-col items-center py-1 px-2 text-xs whitespace-nowrap flex-shrink-0"
+          :class="$route.name === 'comprobantes' ? 'text-primary font-bold' : 'text-text-muted'"
+        >
+          <span>Comprobantes</span>
+        </router-link>
+        <router-link 
+          v-if="authStore.isAdmin"
+          to="/reportes" 
+          class="flex flex-col items-center py-1 px-2 text-xs whitespace-nowrap flex-shrink-0"
+          :class="$route.name === 'reportes' ? 'text-primary font-bold' : 'text-text-muted'"
+        >
+          <span>Reportes</span>
+        </router-link>
+        <router-link 
+          v-if="authStore.isAdmin"
           to="/ajustes" 
-          class="flex flex-col items-center py-1 px-2 text-xs"
+          class="flex flex-col items-center py-1 px-2 text-xs whitespace-nowrap flex-shrink-0"
           :class="!conexionStore.isOnline ? 'opacity-40 pointer-events-none' : ($route.name === 'ajustes' ? 'text-primary font-bold' : 'text-text-muted')"
         >
           <span>Ajustes</span>

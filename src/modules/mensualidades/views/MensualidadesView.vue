@@ -275,6 +275,57 @@
       </div>
     </div>
 
+    <!-- MODAL DE PAGO EXITOSO Y COMPROBANTE (HU-20, HU-21) -->
+    <div v-if="modalExitoPago" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div class="bg-surface rounded-2xl border border-border p-5 max-w-sm w-full shadow-2xl text-center space-y-4">
+        <div class="w-12 h-12 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+
+        <div>
+          <h3 class="text-base font-bold text-text-primary">¡Pago de Mensualidad Exitoso!</h3>
+          <p class="text-xs text-text-secondary mt-1">
+            Cliente: <strong class="text-text-primary">{{ modalExitoPago.cliente }}</strong>
+          </p>
+        </div>
+
+        <div class="bg-surface-elevated p-3 rounded-xl border border-border text-xs space-y-1">
+          <div class="flex justify-between">
+            <span class="text-text-secondary">Placa:</span>
+            <span class="font-mono font-bold text-text-primary">{{ modalExitoPago.placa }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-text-secondary">Valor Pagado:</span>
+            <span class="font-bold text-primary font-mono">${{ modalExitoPago.valor.toLocaleString() }}</span>
+          </div>
+          <div class="flex justify-between text-[11px] text-text-muted">
+            <span>Comprobante:</span>
+            <span class="font-mono font-bold">{{ modalExitoPago.consecutivo ? '#' + modalExitoPago.consecutivo : 'Provisional' }}</span>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-1">
+          <button 
+            @click="descargarComprobanteMensualidad"
+            class="w-full py-2.5 text-xs font-bold rounded-xl bg-primary text-white hover:opacity-90 shadow-md flex items-center justify-center space-x-1.5"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Descargar Comprobante PDF</span>
+          </button>
+          <button 
+            @click="modalExitoPago = null"
+            class="w-full py-2 text-xs font-semibold rounded-xl border border-border text-text-secondary hover:bg-surface-elevated"
+          >
+            Finalizar y Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL REGISTRAR AVISO (HU-19) -->
     <div v-if="modalAviso" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div class="bg-surface rounded-2xl border border-border p-5 max-w-sm w-full shadow-2xl space-y-4">
@@ -312,6 +363,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { mensualidadesService } from '@/modules/mensualidades/services/mensualidadesService'
 import { ajustesService } from '@/modules/ajustes/services/ajustesService'
+import { comprobanteService } from '@/modules/comprobantes/services/comprobanteService'
 
 const authStore = useAuthStore()
 
@@ -322,6 +374,7 @@ const metodosDisponibles = ref([])
 
 const mostrarModalNueva = ref(false)
 const modalPago = ref(null)
+const modalExitoPago = ref(null)
 const modalAviso = ref(null)
 const mensajeExito = ref('')
 const errorMensaje = ref('')
@@ -404,18 +457,79 @@ function abrirPago(m) {
 }
 
 async function confirmarPago() {
+  if (!modalPago.value) return
+  const infoPago = { ...modalPago.value }
+
   try {
     await mensualidadesService.registrarPago({
-      mensualidadId: modalPago.value.mensualidad.id,
-      metodoPagoId: modalPago.value.metodoPagoId,
-      valor: modalPago.value.valor
+      mensualidadId: infoPago.mensualidad.id,
+      metodoPagoId: infoPago.metodoPagoId,
+      valor: infoPago.valor
     })
+
+    // Generar consecutivo de comprobante oficial (HU-20)
+    let consecutivo = null
+    try {
+      const resComp = await comprobanteService.crearComprobante({
+        origen: 'pago_mensualidad',
+        origenId: infoPago.mensualidad.id,
+        clienteNombre: infoPago.mensualidad.clientes?.nombre,
+        clienteDocumento: infoPago.mensualidad.clientes?.documento
+      })
+      if (resComp?.comprobante) {
+        consecutivo = resComp.comprobante.consecutivo
+      }
+    } catch (e) {
+      console.warn('Comprobante provisional mensualidad:', e)
+    }
+
+    const metodoSel = metodosDisponibles.value.find(m => m.id === infoPago.metodoPagoId)
+
+    modalExitoPago.value = {
+      cliente: infoPago.mensualidad.clientes?.nombre || 'Cliente',
+      documento: infoPago.mensualidad.clientes?.documento,
+      placa: infoPago.mensualidad.vehiculos?.placa || 'VEH-000',
+      planNombre: infoPago.mensualidad.planes_mensuales?.nombre || 'Mensualidad',
+      periodoDesde: infoPago.mensualidad.fecha_inicio,
+      periodoHasta: infoPago.mensualidad.fecha_fin,
+      valor: infoPago.valor,
+      metodoPago: metodoSel?.nombre || 'Efectivo',
+      consecutivo
+    }
+
     mensajeExito.value = 'Pago registrado y mensualidad renovada exitosamente'
     modalPago.value = null
     await cargarTodo()
   } catch (err) {
     errorMensaje.value = err.message || 'Error al registrar pago'
   }
+}
+
+function descargarComprobanteMensualidad() {
+  if (!modalExitoPago.value) return
+  const info = modalExitoPago.value
+
+  const detalle = {
+    tipo: 'mensualidad',
+    placa: info.placa,
+    planNombre: info.planNombre,
+    periodoDesde: info.periodoDesde,
+    periodoHasta: info.periodoHasta,
+    metodoPago: info.metodoPago,
+    cajero: authStore.userProfile?.nombre_completo || 'Administración'
+  }
+
+  comprobanteService.descargarPDF({
+    parqueadero: authStore.parqueadero,
+    comprobante: {
+      consecutivo: info.consecutivo,
+      cliente_nombre: info.cliente,
+      cliente_documento: info.documento,
+      valor: info.valor
+    },
+    detalle,
+    esCopia: false
+  })
 }
 
 function abrirAviso(m) {

@@ -32,6 +32,18 @@ const routes = [
         meta: { requiresAuth: true, roles: ['admin', 'operador'] }
       },
       {
+        path: 'comprobantes',
+        name: 'comprobantes',
+        component: () => import('@/modules/comprobantes/views/ComprobantesView.vue'),
+        meta: { requiresAuth: true, roles: ['admin'] }
+      },
+      {
+        path: 'reportes',
+        name: 'reportes',
+        component: () => import('@/modules/reportes/views/ReportesView.vue'),
+        meta: { requiresAuth: true, roles: ['admin'] }
+      },
+      {
         path: 'ajustes',
         name: 'ajustes',
         component: () => import('@/modules/ajustes/views/AjustesView.vue'),
