@@ -399,12 +399,12 @@ function calcularMinutos(entradaIso) {
 
 function estimarCobro(v) {
   const min = calcularMinutos(v.entrada_at)
-  const tar = v.tarifas || { modalidad: 'por_hora', valor: 3000, minutos_gracia: 5 }
+  const tar = v.tarifas || { modalidad: 'por_hora', valor: 3500, minutos_gracia: 0 }
   return calcularCobroBase({
     minutos: min,
     modalidad: tar.modalidad || 'por_hora',
-    valor: tar.valor || 3000,
-    minutosGracia: tar.minutos_gracia || 0
+    valor: tar.valor || 3500,
+    minutosGracia: 0 // Sin tiempo de gracia: desde el minuto 1 inicia el cobro
   })
 }
 
