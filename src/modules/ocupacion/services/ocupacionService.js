@@ -47,7 +47,13 @@ export const ocupacionService = {
       if (error) throw error
       return data
     } catch (err) {
-      // Respaldo de contingencia: si la red falla a mitad de la petición, encolar en Dexie
+      // Si el error es de base de datos o validación, propagarlo
+      const esErrorRed = !navigator.onLine || err.message?.includes('fetch') || err.name === 'TypeError'
+      if (!esErrorRed && err.message) {
+        throw err
+      }
+
+      // Respaldo de contingencia offline: encolar en Dexie e IndexedDB
       const op = await encolarOperacion('entrada', {
         placa: placaLimpia,
         tipoVehiculoId,

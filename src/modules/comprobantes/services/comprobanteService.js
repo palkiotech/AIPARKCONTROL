@@ -79,9 +79,7 @@ export const comprobanteService = {
    * Lista los comprobantes emitidos (HU-22)
    */
   async listarComprobantes(parqueaderoId) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return comprobantesLocales
-    }
+    if (!parqueaderoId) return []
 
     try {
       const { data, error } = await supabase
@@ -91,9 +89,9 @@ export const comprobanteService = {
         .order('consecutivo', { ascending: false })
 
       if (error) throw error
-      return data && data.length ? data : comprobantesLocales
+      return data || []
     } catch (err) {
-      return comprobantesLocales
+      return []
     }
   },
 

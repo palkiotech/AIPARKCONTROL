@@ -42,8 +42,28 @@
       </button>
     </div>
 
+    <!-- Indicador de Carga / Spinner -->
+    <div v-if="cargando" class="flex flex-col items-center justify-center py-20 text-text-muted space-y-3">
+      <div class="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      <span class="text-xs font-semibold">Cargando mensualidades...</span>
+    </div>
+
+    <!-- Estado Vacío Cuando no hay registros -->
+    <div v-else-if="mensualidades.length === 0" class="bg-surface rounded-2xl border border-border p-10 text-center space-y-3 shadow-sm">
+      <div class="w-12 h-12 mx-auto rounded-full bg-surface-elevated flex items-center justify-center text-text-muted text-xl">
+        📅
+      </div>
+      <h4 class="font-bold text-sm text-text-primary">No hay mensualidades registradas</h4>
+      <p class="text-xs text-text-secondary max-w-sm mx-auto">
+        Aún no has registrado clientes mensuales en este parqueadero. Haz clic en el botón de abajo para registrar el primero.
+      </p>
+      <button @click="mostrarModalNueva = true" class="btn-primary text-xs mx-auto inline-block">
+        + Registrar Primera Mensualidad
+      </button>
+    </div>
+
     <!-- VISTA 1: AGENDA DE VENCIMIENTOS (HU-17) -->
-    <div v-if="pestañaActiva === 'agenda'" class="space-y-6">
+    <div v-else-if="pestañaActiva === 'agenda'" class="space-y-6">
       <!-- Sección: Vencidas (Rojo) -->
       <div v-if="gruposAgenda.vencidas.length" class="space-y-2">
         <h3 class="text-xs font-bold uppercase tracking-wider text-danger flex items-center space-x-1.5">
@@ -367,6 +387,7 @@ import { comprobanteService } from '@/modules/comprobantes/services/comprobanteS
 
 const authStore = useAuthStore()
 
+const cargando = ref(true)
 const pestañaActiva = ref('agenda')
 const mensualidades = ref([])
 const planesDisponibles = ref([])
@@ -417,6 +438,7 @@ function formatearHora(iso) {
 
 async function cargarTodo() {
   const pqId = authStore.parqueaderoId
+  cargando.value = true
   try {
     const [lista, planes, metodos, tipos] = await Promise.all([
       mensualidadesService.listarMensualidades(pqId),
@@ -426,14 +448,16 @@ async function cargarTodo() {
     ])
 
     mensualidades.value = lista
-    planesDisponibles.value = planes.length ? planes : [{ id: 'p1', nombre: 'Mensual Carro', valor: 150000 }]
-    metodosDisponibles.value = metodos.length ? metodos : [{ id: 'm1', nombre: 'Efectivo' }]
+    planesDisponibles.value = planes
+    metodosDisponibles.value = metodos
 
     if (planesDisponibles.value.length) formNueva.value.planId = planesDisponibles.value[0].id
     if (metodosDisponibles.value.length) formNueva.value.metodoPagoId = metodosDisponibles.value[0].id
     if (tipos.length) formNueva.value.tipoVehiculoId = tipos[0].id
   } catch (err) {
     console.warn(err)
+  } finally {
+    cargando.value = false
   }
 }
 

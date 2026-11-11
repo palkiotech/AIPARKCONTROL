@@ -14,8 +14,15 @@
       </div>
     </div>
 
-    <!-- ESTADO 1: SIN TURNO ABIERTO (PIDE ABRIR TURNO CON BASE) -->
-    <div v-if="!turnoActual || turnoActual.estado === 'cerrado'" class="bg-surface rounded-2xl border border-border p-6 text-center space-y-4">
+    <!-- Indicador de Carga / Spinner -->
+    <div v-if="cargando" class="flex flex-col items-center justify-center py-20 text-text-muted space-y-3">
+      <div class="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      <span class="text-xs font-semibold">Consultando estado de caja...</span>
+    </div>
+
+    <template v-else>
+      <!-- ESTADO 1: SIN TURNO ABIERTO (PIDE ABRIR TURNO CON BASE) -->
+      <div v-if="!turnoActual || turnoActual.estado === 'cerrado'" class="bg-surface rounded-2xl border border-border p-6 text-center space-y-4">
       <div class="w-12 h-12 bg-warning-bg text-warning rounded-full mx-auto flex items-center justify-center font-bold text-xl">
         !
       </div>
@@ -164,6 +171,7 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -174,6 +182,7 @@ import { cajaService } from '@/modules/caja/services/cajaService'
 
 const authStore = useAuthStore()
 
+const cargando = ref(true)
 const turnoActual = ref(null)
 const mensajeExito = ref('')
 const errorMensaje = ref('')
@@ -197,6 +206,7 @@ function formatearHora(iso) {
 
 async function cargarTurno() {
   const pqId = authStore.parqueaderoId
+  cargando.value = true
   try {
     turnoActual.value = await cajaService.obtenerTurnoActual(pqId)
     if (turnoActual.value) {
@@ -205,6 +215,8 @@ async function cargarTurno() {
     }
   } catch (err) {
     console.warn(err)
+  } finally {
+    cargando.value = false
   }
 }
 

@@ -14,8 +14,10 @@ export const cajaService = {
    * Obtiene el turno actualmente abierto o por recibir (HU-24)
    */
   async obtenerTurnoActual(parqueaderoId) {
+    if (!parqueaderoId) return null
+
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return turnoLocalActivo
+      return null
     }
 
     try {
@@ -27,9 +29,9 @@ export const cajaService = {
         .maybeSingle()
 
       if (error) throw error
-      return data || turnoLocalActivo
+      return data || null
     } catch (err) {
-      return turnoLocalActivo
+      return null
     }
   },
 

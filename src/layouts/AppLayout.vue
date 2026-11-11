@@ -32,7 +32,10 @@
             {{ authStore.isSuperadmin ? 'ParkControl · Superadmin' : (authStore.parqueadero?.nombre || 'ParkControl') }}
           </h1>
           <p class="text-xs text-text-muted flex items-center space-x-1">
-            <span v-if="!authStore.isSuperadmin">Turno: Activo</span>
+            <span v-if="!authStore.isSuperadmin">
+              <span class="inline-block w-1.5 h-1.5 rounded-full mr-1" :class="tieneTurnoAbierto ? 'bg-success' : 'bg-warning'"></span>
+              {{ tieneTurnoAbierto ? 'Turno: Abierto' : 'Caja: Sin turno' }}
+            </span>
             <span v-else>Plataforma SaaS</span>
           </p>
         </div>
@@ -242,11 +245,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTemaStore } from '@/stores/tema'
 import { useConexionStore } from '@/stores/conexion'
 import { useAuthStore } from '@/stores/auth'
+import { cajaService } from '@/modules/caja/services/cajaService'
 import { sincronizarAhora } from '@/offline/sync'
 
 const router = useRouter()
@@ -255,6 +259,18 @@ const conexionStore = useConexionStore()
 const authStore = useAuthStore()
 
 const sincronizandoManual = ref(false)
+const tieneTurnoAbierto = ref(false)
+
+async function verificarTurno() {
+  if (authStore.parqueaderoId && !authStore.isSuperadmin) {
+    const turno = await cajaService.obtenerTurnoActual(authStore.parqueaderoId)
+    tieneTurnoAbierto.value = !!turno
+  }
+}
+
+onMounted(() => {
+  verificarTurno()
+})
 
 function toggleTheme() {
   const next = temaStore.isDark ? 'light' : 'dark'

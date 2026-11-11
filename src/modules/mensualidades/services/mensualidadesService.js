@@ -54,7 +54,7 @@ export const mensualidadesService = {
    * Lista todas las mensualidades y clasifica su estado según el semáforo (HU-17)
    */
   async listarMensualidades(parqueaderoId) {
-    let raw = mensualidadesLocales
+    if (!parqueaderoId) return []
 
     if (typeof navigator !== 'undefined' && navigator.onLine) {
       try {
@@ -65,28 +65,28 @@ export const mensualidadesService = {
           .eq('activa', true)
           .order('fecha_fin', { ascending: true })
 
-        if (!error && data && data.length) {
-          raw = data
+        if (!error && data) {
+          return data.map(m => {
+            const clasificacion = clasificarEstadoMensualidad({
+              fechaFin: m.fecha_fin,
+              diasAviso: 5,
+              diasGracia: 0
+            })
+            const ultimoAviso = m.avisos_mensualidad?.[0] || null
+
+            return {
+              ...m,
+              clasificacion,
+              ultimoAviso
+            }
+          })
         }
       } catch (e) {
-        console.warn('Usando caché local de mensualidades:', e)
+        console.warn('Error cargando mensualidades desde Supabase:', e)
       }
     }
 
-    return raw.map(m => {
-      const clasificacion = clasificarEstadoMensualidad({
-        fechaFin: m.fecha_fin,
-        diasAviso: 5,
-        diasGracia: 0
-      })
-      const ultimoAviso = m.avisos_mensualidad?.[0] || m.avisos?.[0] || null
-
-      return {
-        ...m,
-        clasificacion,
-        ultimoAviso
-      }
-    })
+    return []
   },
 
   /**

@@ -2,6 +2,41 @@ import { supabase } from '@/lib/supabase'
 import { calcularCobroConFranja } from '@/domain/cobro'
 import { generarProximosPeriodos } from '@/domain/periodo'
 
+// Cache en memoria para catálogos maestros con TTL de 60 segundos
+const cacheCatalogo = {
+  tipos: new Map(),
+  metodos: new Map(),
+  planes: new Map(),
+  tarifas: new Map(),
+  ttl: 60000
+}
+
+function getCache(map, key) {
+  const item = map.get(key)
+  if (item && Date.now() - item.time < cacheCatalogo.ttl) {
+    return item.data
+  }
+  return null
+}
+
+function setCache(map, key, data) {
+  map.set(key, { data, time: Date.now() })
+}
+
+export function invalidarCacheCatalogos(pqId) {
+  if (pqId) {
+    cacheCatalogo.tipos.delete(pqId)
+    cacheCatalogo.metodos.delete(pqId)
+    cacheCatalogo.planes.delete(pqId)
+    cacheCatalogo.tarifas.delete(pqId)
+  } else {
+    cacheCatalogo.tipos.clear()
+    cacheCatalogo.metodos.clear()
+    cacheCatalogo.planes.clear()
+    cacheCatalogo.tarifas.clear()
+  }
+}
+
 export const ajustesService = {
   // --- DATOS DEL NEGOCIO (HU-06) ---
   async obtenerDatosNegocio(parqueaderoId) {
@@ -36,18 +71,24 @@ export const ajustesService = {
     return data
   },
 
-  // --- TIPOS DE VEHÍCULO (HU-07) ---
+  // --- TIPOS DE VEHÍCULO (HU-07) CON CACHÉ DE ALTO RENDIMIENTO ---
   async listarTiposVehiculo(parqueaderoId) {
+    const enCache = getCache(cacheCatalogo.tipos, parqueaderoId)
+    if (enCache) return enCache
+
     const { data, error } = await supabase
       .from('tipos_vehiculo')
       .select('*')
       .eq('parqueadero_id', parqueaderoId)
       .order('orden', { ascending: true })
     if (error) throw error
-    return data || []
+    const resultado = data || []
+    setCache(cacheCatalogo.tipos, parqueaderoId, resultado)
+    return resultado
   },
 
   async guardarTipoVehiculo(parqueaderoId, tipo) {
+    invalidarCacheCatalogos(parqueaderoId)
     if (tipo.id) {
       const { data, error } = await supabase
         .from('tipos_vehiculo')
@@ -82,34 +123,39 @@ export const ajustesService = {
     }
   },
 
-  // --- TARIFAS (HU-08) ---
+  // --- TARIFAS (HU-08) CON CACHÉ ---
   async listarTarifas(parqueaderoId) {
+    const enCache = getCache(cacheCatalogo.tarifas, parqueaderoId)
+    if (enCache) return enCache
+
     const { data, error } = await supabase
       .from('tarifas')
       .select('*, tipos_vehiculo(nombre)')
       .eq('parqueadero_id', parqueaderoId)
       .order('created_at', { ascending: true })
     if (error) throw error
-    return data || []
+    const resultado = data || []
+    setCache(cacheCatalogo.tarifas, parqueaderoId, resultado)
+    return resultado
   },
 
   async guardarTarifa(parqueaderoId, tarifa) {
+    invalidarCacheCatalogos(parqueaderoId)
     const payload = {
       parqueadero_id: parqueaderoId,
       tipo_vehiculo_id: tarifa.tipo_vehiculo_id,
       nombre: tarifa.nombre.trim(),
       modalidad: tarifa.modalidad,
       valor: parseInt(tarifa.valor, 10),
-      minutos_fraccion: tarifa.modalidad === 'por_fraccion' ? parseInt(tarifa.minutos_fraccion, 10) : null,
+      minutos_fraccion: parseInt(tarifa.minutos_fraccion || 15, 10),
       minutos_gracia: parseInt(tarifa.minutos_gracia || 0, 10),
       tope_por_24h: tarifa.tope_por_24h ? parseInt(tarifa.tope_por_24h, 10) : null,
       es_predeterminada: !!tarifa.es_predeterminada,
-      franja_inicio: tarifa.tiene_franja ? tarifa.franja_inicio : null,
-      franja_fin: tarifa.tiene_franja ? tarifa.franja_fin : null,
+      franja_inicio: tarifa.franja_inicio || null,
+      franja_fin: tarifa.franja_fin || null,
       activa: tarifa.activa !== false
     }
 
-    // Si se marca como predeterminada, desmarcar las otras del mismo tipo
     if (payload.es_predeterminada) {
       await supabase
         .from('tarifas')
@@ -138,18 +184,24 @@ export const ajustesService = {
     }
   },
 
-  // --- PLANES MENSUALES (HU-09) ---
+  // --- PLANES MENSUALES (HU-09) CON CACHÉ ---
   async listarPlanesMensuales(parqueaderoId) {
+    const enCache = getCache(cacheCatalogo.planes, parqueaderoId)
+    if (enCache) return enCache
+
     const { data, error } = await supabase
       .from('planes_mensuales')
       .select('*, tipos_vehiculo(nombre)')
       .eq('parqueadero_id', parqueaderoId)
       .order('created_at', { ascending: true })
     if (error) throw error
-    return data || []
+    const resultado = data || []
+    setCache(cacheCatalogo.planes, parqueaderoId, resultado)
+    return resultado
   },
 
   async guardarPlanMensual(parqueaderoId, plan) {
+    invalidarCacheCatalogos(parqueaderoId)
     const payload = {
       parqueadero_id: parqueaderoId,
       tipo_vehiculo_id: plan.tipo_vehiculo_id,
@@ -181,18 +233,24 @@ export const ajustesService = {
     }
   },
 
-  // --- MÉTODOS DE PAGO (HU-06) ---
+  // --- MÉTODOS DE PAGO (HU-06) CON CACHÉ ---
   async listarMetodosPago(parqueaderoId) {
+    const enCache = getCache(cacheCatalogo.metodos, parqueaderoId)
+    if (enCache) return enCache
+
     const { data, error } = await supabase
       .from('metodos_pago')
       .select('*')
       .eq('parqueadero_id', parqueaderoId)
       .order('orden', { ascending: true })
     if (error) throw error
-    return data || []
+    const resultado = data || []
+    setCache(cacheCatalogo.metodos, parqueaderoId, resultado)
+    return resultado
   },
 
   async guardarMetodoPago(parqueaderoId, metodo) {
+    invalidarCacheCatalogos(parqueaderoId)
     const payload = {
       parqueadero_id: parqueaderoId,
       nombre: metodo.nombre.trim(),
@@ -221,12 +279,12 @@ export const ajustesService = {
     }
   },
 
-  // --- SIMULADORES EN VIVO (HU-08 y HU-09) ---
-  simularCobroTarifa(params) {
-    return calcularCobroConFranja(params)
+  // --- SIMULADORES (Lógica Pura de Dominio) ---
+  simularCobroTarifa({ entradaAt, salidaAt, tarifaGeneral, tarifaNocturna = null }) {
+    return calcularCobroConFranja({ entradaAt, salidaAt, tarifaGeneral, tarifaNocturna })
   },
 
-  simularPeriodosPlan(params) {
-    return generarProximosPeriodos(params)
+  simularPeriodosPlan({ tipoPeriodo, duracionDias, fechaInicio, cantidad = 3 }) {
+    return generarProximosPeriodos({ tipoPeriodo, duracionDias, fechaInicio, cantidad })
   }
 }

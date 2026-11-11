@@ -5,62 +5,69 @@
       <p class="text-xs md:text-sm text-text-secondary">Semáforo de cobros, clientes para avisar y resumen del día.</p>
     </div>
 
-    <!-- 1. SEMÁFORO DE VENCIMIENTOS (HU-23) -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <!-- Tarjeta Roja: Vencidas -->
-      <div 
-        @click="filtroColor = (filtroColor === 'rojo' ? null : 'rojo')"
-        class="bg-surface p-4 rounded-2xl border cursor-pointer transition-all hover:shadow-md"
-        :class="filtroColor === 'rojo' ? 'ring-2 ring-danger border-danger shadow-md' : 'border-border'"
-      >
-        <div class="flex items-center space-x-2">
-          <span class="w-3 h-3 rounded-full bg-danger animate-pulse"></span>
-          <span class="text-xs font-bold uppercase tracking-wider text-danger">ROJO · Vencidas</span>
-        </div>
-        <p class="text-3xl font-black text-danger mt-2">
-          {{ datos.semaforo.rojo.count }} <span class="text-sm font-semibold text-text-muted">clientes</span>
-        </p>
-        <p class="text-xs font-bold text-text-primary mt-1">
-          ${{ datos.semaforo.rojo.valor.toLocaleString() }} por cobrar
-        </p>
-      </div>
-
-      <!-- Tarjeta Amarilla: Por Vencer -->
-      <div 
-        @click="filtroColor = (filtroColor === 'amarillo' ? null : 'amarillo')"
-        class="bg-surface p-4 rounded-2xl border cursor-pointer transition-all hover:shadow-md"
-        :class="filtroColor === 'amarillo' ? 'ring-2 ring-warning border-warning shadow-md' : 'border-border'"
-      >
-        <div class="flex items-center space-x-2">
-          <span class="w-3 h-3 rounded-full bg-warning"></span>
-          <span class="text-xs font-bold uppercase tracking-wider text-warning">AMARILLO · Por vencer</span>
-        </div>
-        <p class="text-3xl font-black text-warning mt-2">
-          {{ datos.semaforo.amarillo.count }} <span class="text-sm font-semibold text-text-muted">clientes</span>
-        </p>
-        <p class="text-xs text-text-secondary mt-1">
-          <strong class="text-danger">{{ datos.semaforo.amarillo.vencenHoy }} vencen hoy</strong> · ${{ datos.semaforo.amarillo.valor.toLocaleString() }}
-        </p>
-      </div>
-
-      <!-- Tarjeta Verde: Al Día -->
-      <div 
-        @click="filtroColor = (filtroColor === 'verde' ? null : 'verde')"
-        class="bg-surface p-4 rounded-2xl border cursor-pointer transition-all hover:shadow-md"
-        :class="filtroColor === 'verde' ? 'ring-2 ring-success border-success shadow-md' : 'border-border'"
-      >
-        <div class="flex items-center space-x-2">
-          <span class="w-3 h-3 rounded-full bg-success"></span>
-          <span class="text-xs font-bold uppercase tracking-wider text-success">VERDE · Al día</span>
-        </div>
-        <p class="text-3xl font-black text-success mt-2">
-          {{ datos.semaforo.verde.count }} <span class="text-sm font-semibold text-text-muted">clientes</span>
-        </p>
-        <p class="text-xs text-text-muted mt-1">
-          Sin acción pendiente
-        </p>
-      </div>
+    <!-- Spinner de carga -->
+    <div v-if="cargando" class="flex flex-col items-center justify-center py-24 text-text-muted space-y-3">
+      <div class="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      <span class="text-xs font-semibold">Cargando métricas del día...</span>
     </div>
+
+    <template v-else>
+      <!-- 1. SEMÁFORO DE VENCIMIENTOS (HU-23) -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Tarjeta Roja: Vencidas -->
+        <div 
+          @click="filtroColor = (filtroColor === 'rojo' ? null : 'rojo')"
+          class="bg-surface p-4 rounded-2xl border cursor-pointer transition-all hover:shadow-md"
+          :class="filtroColor === 'rojo' ? 'ring-2 ring-danger border-danger shadow-md' : 'border-border'"
+        >
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-danger animate-pulse"></span>
+            <span class="text-xs font-bold uppercase tracking-wider text-danger">ROJO · Vencidas</span>
+          </div>
+          <p class="text-3xl font-black text-danger mt-2">
+            {{ datos.semaforo.rojo.count }} <span class="text-sm font-semibold text-text-muted">clientes</span>
+          </p>
+          <p class="text-xs font-bold text-text-primary mt-1">
+            ${{ datos.semaforo.rojo.valor.toLocaleString() }} por cobrar
+          </p>
+        </div>
+
+        <!-- Tarjeta Amarilla: Por Vencer -->
+        <div 
+          @click="filtroColor = (filtroColor === 'amarillo' ? null : 'amarillo')"
+          class="bg-surface p-4 rounded-2xl border cursor-pointer transition-all hover:shadow-md"
+          :class="filtroColor === 'amarillo' ? 'ring-2 ring-warning border-warning shadow-md' : 'border-border'"
+        >
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-warning"></span>
+            <span class="text-xs font-bold uppercase tracking-wider text-warning">AMARILLO · Por vencer</span>
+          </div>
+          <p class="text-3xl font-black text-warning mt-2">
+            {{ datos.semaforo.amarillo.count }} <span class="text-sm font-semibold text-text-muted">clientes</span>
+          </p>
+          <p class="text-xs text-text-secondary mt-1">
+            <strong class="text-danger">{{ datos.semaforo.amarillo.vencenHoy }} vencen hoy</strong> · ${{ datos.semaforo.amarillo.valor.toLocaleString() }}
+          </p>
+        </div>
+
+        <!-- Tarjeta Verde: Al Día -->
+        <div 
+          @click="filtroColor = (filtroColor === 'verde' ? null : 'verde')"
+          class="bg-surface p-4 rounded-2xl border cursor-pointer transition-all hover:shadow-md"
+          :class="filtroColor === 'verde' ? 'ring-2 ring-success border-success shadow-md' : 'border-border'"
+        >
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-success"></span>
+            <span class="text-xs font-bold uppercase tracking-wider text-success">VERDE · Al día</span>
+          </div>
+          <p class="text-3xl font-black text-success mt-2">
+            {{ datos.semaforo.verde.count }} <span class="text-sm font-semibold text-text-muted">clientes</span>
+          </p>
+          <p class="text-xs text-text-muted mt-1">
+            Sin acción pendiente
+          </p>
+        </div>
+      </div>
 
     <!-- 2. CLIENTES PARA AVISAR (HU-19, HU-23) -->
     <div class="bg-surface rounded-2xl border border-border p-5 space-y-4 shadow-sm">
@@ -158,6 +165,7 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -168,6 +176,7 @@ import { dashboardService } from '@/modules/dashboard/services/dashboardService'
 
 const authStore = useAuthStore()
 
+const cargando = ref(true)
 const filtroColor = ref(null)
 const soloSinAvisar = ref(true)
 
@@ -204,10 +213,13 @@ function formatVenceRelativo(c) {
 
 async function cargarDashboard() {
   const pqId = authStore.parqueaderoId
+  cargando.value = true
   try {
     datos.value = await dashboardService.obtenerDatosDashboard(pqId)
   } catch (err) {
     console.warn(err)
+  } finally {
+    cargando.value = false
   }
 }
 

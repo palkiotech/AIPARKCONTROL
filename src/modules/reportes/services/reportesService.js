@@ -6,20 +6,12 @@ export const reportesService = {
    * Obtiene los totales agregados de ingresos en un rango de fechas (HU-25)
    */
   async obtenerReporteIngresos(fechaDesde, fechaHasta) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      return {
-        total_hora: 120000,
-        total_mensualidades: 450000,
-        gran_total: 570000,
-        por_tipo: [
-          { tipo: 'Carro', total: 420000, cantidad: 14 },
-          { tipo: 'Moto', total: 150000, cantidad: 10 }
-        ],
-        por_metodo: [
-          { metodo: 'Efectivo', total: 320000, es_efectivo: true },
-          { metodo: 'Nequi', total: 250000, es_efectivo: false }
-        ]
-      }
+    const vacio = {
+      total_hora: 0,
+      total_mensualidades: 0,
+      gran_total: 0,
+      por_tipo: [],
+      por_metodo: []
     }
 
     try {
@@ -28,21 +20,9 @@ export const reportesService = {
         p_fecha_hasta: fechaHasta
       })
       if (error) throw error
-      return data
+      return data || vacio
     } catch (err) {
-      return {
-        total_hora: 120000,
-        total_mensualidades: 450000,
-        gran_total: 570000,
-        por_tipo: [
-          { tipo: 'Carro', total: 420000, cantidad: 14 },
-          { tipo: 'Moto', total: 150000, cantidad: 10 }
-        ],
-        por_metodo: [
-          { metodo: 'Efectivo', total: 320000, es_efectivo: true },
-          { metodo: 'Nequi', total: 250000, es_efectivo: false }
-        ]
-      }
+      return vacio
     }
   },
 
