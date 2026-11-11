@@ -49,16 +49,16 @@
 
     <!-- ESTADO 2: TURNO ABIERTO EN CURSO (RESUMEN EN VIVO) -->
     <div v-else-if="turnoActual.estado === 'abierto'" class="space-y-4">
-      <!-- Tarjetas de Caja -->
+      <!-- Tarjetas de Caja en Pastel Menta y Sky -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="card-craft p-5 space-y-1 relative overflow-hidden border-primary/40 dark:border-primary/50">
+        <div class="card-craft pastel-card-mint p-5 space-y-1 relative overflow-hidden">
           <div class="flex justify-between items-start">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Efectivo Esperado en Caja</span>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Saldo Actual
+            <span class="text-[11px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Efectivo Esperado en Caja</span>
+            <span class="badge-pastel-mint text-[10px] font-black px-2 py-0.5 rounded-full">
+              Saldo Vivo
             </span>
           </div>
-          <p class="text-4xl font-black text-primary font-mono num-tabular tracking-tight">
+          <p class="text-4xl font-black text-emerald-700 dark:text-emerald-400 font-mono num-tabular tracking-tight">
             ${{ (turnoActual.efectivo_esperado || 0).toLocaleString() }}
           </p>
           <p class="text-xs text-text-secondary pt-1 font-medium">
@@ -66,11 +66,12 @@
           </p>
         </div>
 
-        <div class="card-craft p-5 space-y-3">
+        <div class="card-craft pastel-card-sky p-5 space-y-3">
           <div class="flex justify-between items-center text-xs">
-            <span class="text-text-muted font-medium text-[11px] uppercase tracking-wider">Estado del Turno</span>
-            <span class="px-2 py-0.5 rounded-full font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase text-[10px]">
-              ● Abierto en Vivo
+            <span class="text-sky-800 dark:text-sky-300 font-bold text-[11px] uppercase tracking-wider">Estado del Turno</span>
+            <span class="badge-pastel-mint px-2 py-0.5 rounded-full font-black uppercase text-[10px] inline-flex items-center space-x-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Abierto en Vivo</span>
             </span>
           </div>
           <div class="text-xs space-y-1.5 text-text-secondary">
@@ -88,11 +89,11 @@
 
       <!-- Acciones de Caja -->
       <div class="flex flex-wrap gap-2.5 pt-1">
-        <button @click="mostrarModalRetiro = true" class="px-4 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-text-primary font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center space-x-2">
+        <button @click="mostrarModalRetiro = true" class="px-4 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-text-primary font-bold text-xs shadow-xs transition-all active:scale-95 flex items-center space-x-2">
           <span>💸</span>
           <span>Registrar Retiro / Ingreso</span>
         </button>
-        <button @click="mostrarModalEntrega = true" class="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center space-x-2">
+        <button @click="mostrarModalEntrega = true" class="px-4 py-2.5 rounded-xl btn-craft-primary text-white font-bold text-xs shadow-xs transition-all active:scale-95 flex items-center space-x-2">
           <span>🤝</span>
           <span>Entregar Turno al Relevo</span>
         </button>

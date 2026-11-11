@@ -28,34 +28,57 @@
       {{ errorMensaje }}
     </div>
 
-    <!-- TARJETAS DE OCUPACIÓN Y CAPACIDAD CON SOBRECUPO (HU-12) -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
+    <!-- TARJETAS DE OCUPACIÓN Y CAPACIDAD CON SOBRECUPO (HU-12) CON PALETA PASTEL DE MOVILIDAD -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div 
         v-for="tipo in resumenOcupacion" 
         :key="tipo.id"
-        class="card-craft p-4 relative overflow-hidden"
-        :class="tipo.ocupados >= tipo.capacidad ? 'border-amber-500/50 dark:border-amber-500/40' : ''"
+        class="card-craft p-4 sm:p-5 relative overflow-hidden transition-all"
+        :class="[
+          tipo.nombre.toLowerCase().includes('moto') ? 'pastel-card-sky' : (tipo.nombre.toLowerCase().includes('bici') ? 'pastel-card-mint' : 'pastel-card-amber'),
+          tipo.ocupados >= tipo.capacidad ? 'ring-2 ring-amber-500/60' : ''
+        ]"
       >
         <div class="flex justify-between items-start">
-          <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">{{ tipo.nombre }}</span>
+          <div class="flex items-center space-x-2">
+            <!-- Icono temático del vehículo -->
+            <div class="w-8 h-8 rounded-xl flex items-center justify-center shadow-xs"
+              :class="tipo.nombre.toLowerCase().includes('moto') ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200' : (tipo.nombre.toLowerCase().includes('bici') ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200')"
+            >
+              <!-- Carro -->
+              <svg v-if="!tipo.nombre.toLowerCase().includes('moto') && !tipo.nombre.toLowerCase().includes('bici')" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17a2 2 0 100-4 2 2 0 000 4zm8 0a2 2 0 100-4 2 2 0 000 4zM5 11l1.5-4.5A2 2 0 018.4 5h7.2a2 2 0 011.9 1.5L19 11M3 13h18M5 17H3v-4m18 4h-2v-4" />
+              </svg>
+              <!-- Moto -->
+              <svg v-else-if="tipo.nombre.toLowerCase().includes('moto')" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-2 0-3 1-4 3l-2 1m12-4c2 0 3 1 4 3l2 1m-4 5a3 3 0 11-6 0 3 3 0 016 0zm-8 0a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <!-- Bici -->
+              <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18a4 4 0 100-8 4 4 0 000 8zm12 0a4 4 0 100-8 4 4 0 000 8zm-7-9l3 5m0 0h4m-4 0l-3 4" />
+              </svg>
+            </div>
+            <span class="text-xs font-black uppercase tracking-wider text-text-primary">{{ tipo.nombre }}</span>
+          </div>
+
           <span 
-            class="text-[10px] font-bold px-2 py-0.5 rounded-full"
-            :class="tipo.ocupados >= tipo.capacidad ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'"
+            class="text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-xs"
+            :class="tipo.ocupados >= tipo.capacidad ? 'badge-pastel-rose' : 'badge-pastel-mint'"
           >
             {{ tipo.ocupados >= tipo.capacidad ? 'Sobrecupo' : `${tipo.capacidad - tipo.ocupados} libres` }}
           </span>
         </div>
         
-        <div class="mt-2.5 flex items-baseline space-x-1.5">
-          <span class="text-3xl font-black text-text-primary num-tabular">{{ tipo.ocupados }}</span>
-          <span class="text-xs font-semibold text-text-muted">/ {{ tipo.capacidad }} cupos</span>
+        <div class="mt-3 flex items-baseline space-x-2">
+          <span class="text-3xl sm:text-4xl font-black text-text-primary num-tabular">{{ tipo.ocupados }}</span>
+          <span class="text-xs font-bold text-text-muted">/ {{ tipo.capacidad }} cupos</span>
         </div>
 
-        <!-- Barra visual de capacidad -->
-        <div class="mt-3 w-full bg-surface-elevated h-1.5 rounded-full overflow-hidden">
+        <!-- Barra visual de capacidad con micro-gradiente -->
+        <div class="mt-3.5 w-full bg-slate-200/70 dark:bg-slate-700/50 h-2 rounded-full overflow-hidden p-0.5">
           <div 
-            class="h-full rounded-full transition-all duration-300"
-            :class="tipo.ocupados >= tipo.capacidad ? 'bg-amber-500' : 'bg-primary'"
+            class="h-full rounded-full transition-all duration-500"
+            :class="tipo.ocupados >= tipo.capacidad ? 'bg-rose-500' : (tipo.nombre.toLowerCase().includes('moto') ? 'bg-sky-500' : (tipo.nombre.toLowerCase().includes('bici') ? 'bg-emerald-500' : 'bg-amber-500'))"
             :style="{ width: Math.min(100, Math.round((tipo.ocupados / (tipo.capacidad || 1)) * 100)) + '%' }"
           ></div>
         </div>
@@ -63,76 +86,89 @@
     </div>
 
     <!-- FILTRO Y LISTA DE VEHÍCULOS DENTRO -->
-    <div class="card-craft overflow-hidden space-y-3 p-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+    <div class="card-craft overflow-hidden space-y-3 p-4 sm:p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/60">
         <div>
-          <h3 class="font-black text-sm tracking-tight text-text-primary">
-            Vehículos en Patio ({{ vehiculosDentro.length }})
+          <h3 class="font-black text-sm tracking-tight text-text-primary flex items-center space-x-2">
+            <span>Vehículos en Patio</span>
+            <span class="badge-pastel-blue text-[11px] font-black px-2 py-0.5 rounded-full">{{ vehiculosDentro.length }}</span>
           </h3>
-          <p class="text-[11px] text-text-muted">Listado activo con cálculo en tiempo real minuto a minuto.</p>
+          <p class="text-[11px] text-text-muted">Control activo con cálculo de tiempo y cobro en tiempo real.</p>
         </div>
         <div class="relative w-full sm:w-64">
           <input 
             v-model="filtroPlaca"
             type="text" 
             placeholder="Buscar por placa..."
-            class="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary uppercase font-mono font-semibold"
+            class="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary uppercase font-mono font-bold tracking-wider"
           />
         </div>
       </div>
 
-      <div v-if="cargando" class="text-center py-8 text-xs text-text-muted">
-        Cargando vehículos en patio...
+      <div v-if="cargando" class="text-center py-10 text-xs text-text-muted flex flex-col items-center justify-center space-y-2">
+        <div class="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+        <span>Consultando vehículos en patio...</span>
       </div>
 
-      <div v-else-if="vehiculosFiltrados.length === 0" class="text-center py-8 text-xs text-text-muted">
-        No hay vehículos dentro con ese criterio.
+      <div v-else-if="vehiculosFiltrados.length === 0" class="text-center py-12 text-xs text-text-muted space-y-2">
+        <div class="w-10 h-10 mx-auto rounded-full bg-surface-elevated flex items-center justify-center text-lg">🚗</div>
+        <p class="font-semibold text-text-primary">No hay vehículos dentro con ese criterio</p>
+        <p class="text-[11px]">Cuando ingresen autos o motos aparecerán aquí en vivo.</p>
       </div>
 
-      <!-- Tarjetas en Móvil / Tabla en Desktop -->
+      <!-- Tabla Estilizada con Relieve y Placas Auténticas -->
       <div v-else class="overflow-x-auto">
         <table class="w-full text-left text-xs">
-          <thead class="bg-surface-elevated text-text-secondary uppercase border-b border-border text-[10px] tracking-wider font-bold">
+          <thead class="bg-surface-elevated/70 text-text-secondary uppercase border-b border-border text-[10px] tracking-wider font-bold">
             <tr>
-              <th class="px-3.5 py-2.5">Placa</th>
-              <th class="px-3.5 py-2.5">Tipo</th>
-              <th class="px-3.5 py-2.5">Entrada</th>
-              <th class="px-3.5 py-2.5">Tiempo</th>
-              <th class="px-3.5 py-2.5">Est. Cobro</th>
-              <th class="px-3.5 py-2.5 text-right">Acción</th>
+              <th class="px-4 py-3">Placa</th>
+              <th class="px-4 py-3">Tipo</th>
+              <th class="px-4 py-3">Hora Entrada</th>
+              <th class="px-4 py-3">Tiempo Estancia</th>
+              <th class="px-4 py-3">Est. Cobro</th>
+              <th class="px-4 py-3 text-right">Acción</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
-            <tr v-for="v in vehiculosFiltrados" :key="v.id" class="hover:bg-surface-elevated/50 transition-colors">
-              <td class="px-3.5 py-3">
-                <div class="flex items-center space-x-2">
+          <tbody class="divide-y divide-border/60">
+            <tr v-for="v in vehiculosFiltrados" :key="v.id" class="hover:bg-surface-elevated/40 transition-colors">
+              <td class="px-4 py-3.5">
+                <div class="flex items-center space-x-2.5">
                   <span 
                     class="plate-colombia text-xs font-mono font-black" 
                     :class="(v.tipos_vehiculo?.nombre || '').toLowerCase().includes('moto') ? 'plate-moto' : ((v.tipos_vehiculo?.nombre || '').toLowerCase().includes('bici') ? 'plate-bici' : 'plate-carro')"
                   >
                     {{ v.placa }}
                   </span>
-                  <span v-if="v.isOffline || v.estado === 'pendiente_sync'" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <span v-if="v.isOffline || v.estado === 'pendiente_sync'" class="text-[9px] font-bold px-2 py-0.5 rounded-full badge-pastel-amber">
                     Offline
                   </span>
                 </div>
               </td>
-              <td class="px-3.5 py-3 font-medium text-text-secondary">{{ v.tipos_vehiculo?.nombre || 'Vehículo' }}</td>
-              <td class="px-3.5 py-3 text-text-secondary num-tabular font-mono">{{ formatearHora(v.entrada_at) }}</td>
-              <td class="px-3.5 py-3 font-semibold num-tabular">
-                <span class="px-2 py-0.5 rounded bg-surface-elevated text-text-primary text-[11px] font-mono border border-border">
-                  {{ calcularMinutos(v.entrada_at) }} min
+              <td class="px-4 py-3.5 font-semibold text-text-secondary">
+                <span class="inline-flex items-center space-x-1.5">
+                  <span>{{ (v.tipos_vehiculo?.nombre || '').toLowerCase().includes('moto') ? '🏍️' : ((v.tipos_vehiculo?.nombre || '').toLowerCase().includes('bici') ? '🚲' : '🚗') }}</span>
+                  <span>{{ v.tipos_vehiculo?.nombre || 'Vehículo' }}</span>
                 </span>
               </td>
-              <td class="px-3.5 py-3 font-mono font-black text-sm text-emerald-600 dark:text-emerald-400 num-tabular">
+              <td class="px-4 py-3.5 text-text-secondary num-tabular font-mono font-medium">{{ formatearHora(v.entrada_at) }}</td>
+              <td class="px-4 py-3.5 font-semibold num-tabular">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full badge-pastel-blue text-[11px] font-mono font-bold space-x-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
+                  <span>{{ formatearTiempoEstancia(calcularMinutos(v.entrada_at)) }}</span>
+                </span>
+              </td>
+              <td class="px-4 py-3.5 font-mono font-black text-sm text-emerald-600 dark:text-emerald-400 num-tabular">
                 ${{ estimarCobro(v).toLocaleString() }}
               </td>
-              <td class="px-3.5 py-3 text-right space-x-1.5">
+              <td class="px-4 py-3.5 text-right space-x-2">
                 <button 
                   @click="abrirModalCobro(v)"
-                  class="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-sm transition-all active:scale-95"
+                  class="px-4 py-1.5 rounded-lg btn-craft-primary text-xs font-bold shadow-xs transition-all active:scale-95 inline-flex items-center space-x-1"
                 >
-                  Cobrar
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>Cobrar</span>
                 </button>
                 <button 
                   v-if="authStore.isAdmin"
@@ -149,18 +185,21 @@
       </div>
     </div>
 
-    <!-- MODAL REGISTRO RÁPIDO DE ENTRADA (< 10 segs, HU-11) -->
+    <!-- MODAL REGISTRO RÁPIDO DE ENTRADA (< 10 segs, HU-11) CON PREVIEW DE PLACA -->
     <div v-if="mostrarModalEntrada" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div class="bg-surface rounded-2xl border border-border p-5 max-w-sm w-full shadow-2xl space-y-4">
-        <div class="flex justify-between items-center">
-          <h3 class="text-base font-bold text-text-primary">Registrar Entrada</h3>
-          <button @click="mostrarModalEntrada = false" class="text-text-muted hover:text-text-primary text-sm font-bold">✕</button>
+        <div class="flex justify-between items-center pb-2 border-b border-border/60">
+          <div class="flex items-center space-x-2">
+            <h3 class="text-base font-black text-text-primary">Registrar Entrada</h3>
+            <span class="badge-pastel-mint text-[10px] font-bold px-2 py-0.5 rounded-full">En Patio</span>
+          </div>
+          <button @click="mostrarModalEntrada = false" class="w-7 h-7 rounded-lg bg-surface-elevated text-text-muted hover:text-text-primary flex items-center justify-center text-sm font-bold transition-colors">✕</button>
         </div>
 
         <form @submit.prevent="confirmarEntrada" class="space-y-4">
-          <!-- Campo Placa enfocado y gigante -->
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Placa del Vehículo *</label>
+          <!-- Campo Placa enfocado y con Live Preview -->
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-text-secondary">Placa del Vehículo *</label>
             <input 
               v-model="entradaForm.placa"
               type="text" 
@@ -168,46 +207,60 @@
               autofocus
               maxlength="10"
               placeholder="ABC123"
-              class="w-full text-center text-2xl font-mono font-bold tracking-widest px-3 py-2.5 rounded-xl bg-surface-elevated border-2 border-primary focus:outline-none uppercase text-text-primary"
+              class="w-full text-center text-2xl font-mono font-black tracking-widest px-3 py-2.5 rounded-xl bg-surface-elevated border-2 border-primary/50 focus:border-primary focus:outline-none uppercase text-text-primary"
             />
+            <!-- Previsualización auténtica en tiempo real -->
+            <div class="flex justify-center pt-1">
+              <span 
+                class="plate-colombia text-sm font-mono font-black shadow-sm"
+                :class="tiposDisponibles.find(t => t.id === entradaForm.tipoVehiculoId)?.nombre?.toLowerCase().includes('moto') ? 'plate-moto' : (tiposDisponibles.find(t => t.id === entradaForm.tipoVehiculoId)?.nombre?.toLowerCase().includes('bici') ? 'plate-bici' : 'plate-carro')"
+              >
+                {{ entradaForm.placa || 'PLACA' }}
+              </span>
+            </div>
           </div>
 
-          <!-- Botones grandes para selección de Tipo de Vehículo -->
+          <!-- Selector táctil de Tipo de Vehículo con pasteles temáticos -->
           <div>
-            <label class="block text-xs font-semibold mb-1.5 text-text-secondary">Tipo de Vehículo</label>
-            <div class="grid grid-cols-2 gap-2">
+            <label class="block text-xs font-bold mb-1.5 text-text-secondary">Tipo de Vehículo</label>
+            <div class="grid grid-cols-3 gap-2">
               <button 
                 v-for="t in tiposDisponibles" 
                 :key="t.id"
                 type="button"
                 @click="entradaForm.tipoVehiculoId = t.id"
-                class="py-2.5 px-3 rounded-xl border text-xs font-bold transition-all text-center"
-                :class="entradaForm.tipoVehiculoId === t.id ? 'bg-primary text-white border-primary shadow-sm' : 'bg-surface-elevated border-border text-text-secondary hover:text-text-primary'"
+                class="py-2.5 px-2 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center space-y-1 shadow-xs"
+                :class="entradaForm.tipoVehiculoId === t.id ? (t.nombre.toLowerCase().includes('moto') ? 'badge-pastel-blue border-sky-400 font-black' : (t.nombre.toLowerCase().includes('bici') ? 'badge-pastel-mint border-emerald-400 font-black' : 'badge-pastel-amber border-amber-400 font-black')) : 'bg-surface-elevated border-border text-text-secondary hover:text-text-primary'"
               >
-                {{ t.nombre }}
+                <span class="text-base">{{ t.nombre.toLowerCase().includes('moto') ? '🏍️' : (t.nombre.toLowerCase().includes('bici') ? '🚲' : '🚗') }}</span>
+                <span class="truncate">{{ t.nombre }}</span>
               </button>
             </div>
           </div>
 
           <!-- Advertencia de sobrecupo (Informativa, no bloqueante, HU-11) -->
-          <div v-if="verificarSobrecupo(entradaForm.tipoVehiculoId)" class="p-2.5 rounded-lg bg-warning-bg text-warning text-xs border border-warning/20">
-            ⚠️ <strong>Capacidad alcanzada:</strong> Este tipo ya está lleno según la capacidad, pero puedes registrarlo de todas formas.
+          <div v-if="verificarSobrecupo(entradaForm.tipoVehiculoId)" class="p-2.5 rounded-xl badge-pastel-amber text-xs font-semibold">
+            ⚠️ <strong>Capacidad alcanzada:</strong> Este tipo ya está lleno, pero el sistema permite sobrecupo.
           </div>
 
           <div class="flex space-x-2 pt-2">
             <button 
               type="button" 
               @click="mostrarModalEntrada = false" 
-              class="w-1/3 py-2.5 text-xs font-semibold rounded-xl border border-border text-text-secondary hover:bg-surface-elevated"
+              class="w-1/3 py-2.5 text-xs font-semibold rounded-xl border border-border text-text-secondary hover:bg-surface-elevated transition-colors"
             >
               Cancelar
             </button>
             <button 
               type="submit" 
               :disabled="guardandoEntrada"
-              class="w-2/3 py-2.5 text-xs font-bold rounded-xl bg-primary text-white hover:opacity-90 shadow-md disabled:opacity-50"
+              class="w-2/3 py-2.5 text-xs font-bold rounded-xl btn-craft-primary text-white shadow-md disabled:opacity-50 flex items-center justify-center space-x-1.5"
             >
-              {{ guardandoEntrada ? 'Guardando...' : 'Confirmar Entrada' }}
+              <svg v-if="guardandoEntrada" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>{{ guardandoEntrada ? 'Registrando...' : 'Confirmar Entrada' }}</span>
             </button>
           </div>
         </form>
@@ -240,67 +293,114 @@
       </div>
     </div>
 
-    <!-- MODAL DE COBRO Y SALIDA (HU-13) -->
+    <!-- MODAL DE COBRO Y SALIDA (HU-13) CON CALCULADORA TÁCTIL Y PASTEL ATELIER -->
     <div v-if="modalCobro" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div class="bg-surface rounded-2xl border border-border p-5 max-w-sm w-full shadow-2xl space-y-4">
-        <div class="flex justify-between items-center">
-          <h3 class="text-base font-bold text-text-primary">Cobrar y Registrar Salida</h3>
-          <button @click="modalCobro = null" class="text-text-muted hover:text-text-primary text-sm font-bold">✕</button>
+        <div class="flex justify-between items-center pb-2 border-b border-border/60">
+          <div class="flex items-center space-x-2">
+            <span class="text-base font-black text-text-primary">Cobrar y Salida</span>
+            <span class="badge-pastel-blue text-[10px] font-bold px-2 py-0.5 rounded-full">Liquidación</span>
+          </div>
+          <button @click="modalCobro = null" class="w-7 h-7 rounded-lg bg-surface-elevated text-text-muted hover:text-text-primary flex items-center justify-center text-sm font-bold transition-colors">✕</button>
         </div>
 
-        <div class="bg-surface-elevated p-3 rounded-xl border border-border text-xs space-y-1.5">
-          <div class="flex justify-between text-sm">
-            <span class="font-mono font-bold text-primary">{{ modalCobro.registro.placa }}</span>
-            <span>{{ modalCobro.registro.tipos_vehiculo?.nombre }}</span>
+        <!-- Ficha del Vehículo con Placa Auténtica -->
+        <div class="card-craft p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span 
+              class="plate-colombia text-sm font-mono font-black shadow-sm"
+              :class="(modalCobro.registro.tipos_vehiculo?.nombre || '').toLowerCase().includes('moto') ? 'plate-moto' : 'plate-carro'"
+            >
+              {{ modalCobro.registro.placa }}
+            </span>
+            <span class="text-xs font-bold text-text-secondary">
+              {{ modalCobro.registro.tipos_vehiculo?.nombre || 'Vehículo' }}
+            </span>
           </div>
-          <div class="flex justify-between text-text-secondary">
-            <span>Tiempo estancia:</span>
-            <span class="font-semibold text-text-primary">{{ modalCobro.minutos }} minutos</span>
+
+          <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-border/60">
+            <div>
+              <span class="text-[10px] font-bold uppercase text-text-muted">Entrada</span>
+              <p class="font-mono font-semibold text-text-primary">{{ formatearHora(modalCobro.registro.entrada_at) }}</p>
+            </div>
+            <div>
+              <span class="text-[10px] font-bold uppercase text-text-muted">Estancia</span>
+              <p class="font-mono font-bold text-sky-700 dark:text-sky-300">{{ formatearTiempoEstancia(modalCobro.minutos) }}</p>
+            </div>
           </div>
-          <div class="flex justify-between text-base font-bold pt-1 border-t border-border">
-            <span>Total a Cobrar:</span>
-            <span class="text-primary">${{ modalCobro.valorTotal.toLocaleString() }}</span>
+        </div>
+
+        <!-- Banner de Total a Cobrar en Pastel Menta Iluminado -->
+        <div class="pastel-card-mint p-4 rounded-xl text-center shadow-xs">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Total Liquidado</span>
+          <div class="text-3xl font-black text-emerald-700 dark:text-emerald-400 font-mono num-tabular tracking-tight">
+            ${{ modalCobro.valorTotal.toLocaleString() }} <span class="text-xs font-bold font-sans">COP</span>
           </div>
         </div>
 
         <!-- Método de Pago -->
         <div>
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Método de Pago</label>
-          <select v-model="modalCobro.metodoPagoId" class="input-field text-xs">
+          <label class="block text-xs font-bold mb-1 text-text-secondary">Método de Pago</label>
+          <select v-model="modalCobro.metodoPagoId" class="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary">
             <option v-for="m in metodosPagoDisponibles" :key="m.id" :value="m.id">
               {{ m.nombre }} {{ m.es_efectivo ? '(Efectivo)' : '' }}
             </option>
           </select>
         </div>
 
-        <!-- Si es efectivo, cálculo de vuelto -->
-        <div v-if="esMetodoEfectivo" class="space-y-1">
-          <label class="block text-xs font-semibold text-text-secondary">Paga con ($)</label>
+        <!-- Si es efectivo: Billetes Rápidos Colombianos y Vuelto Dinámico -->
+        <div v-if="esMetodoEfectivo" class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-text-secondary">Efectivo Recibido</label>
+            <span class="text-[10px] font-semibold text-text-muted">Billetes rápidos</span>
+          </div>
+
+          <div class="grid grid-cols-5 gap-1.5">
+            <button type="button" @click="modalCobro.pagaCon = modalCobro.valorTotal" class="py-1 px-1 text-[10px] font-black rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary transition-all">Exacto</button>
+            <button type="button" @click="modalCobro.pagaCon = 10000" class="py-1 px-1 text-[10px] font-black rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary transition-all">$10k</button>
+            <button type="button" @click="modalCobro.pagaCon = 20000" class="py-1 px-1 text-[10px] font-black rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary transition-all">$20k</button>
+            <button type="button" @click="modalCobro.pagaCon = 50000" class="py-1 px-1 text-[10px] font-black rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary transition-all">$50k</button>
+            <button type="button" @click="modalCobro.pagaCon = 100000" class="py-1 px-1 text-[10px] font-black rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary transition-all">$100k</button>
+          </div>
+
           <input 
             v-model.number="modalCobro.pagaCon" 
             type="number" 
-            class="input-field text-sm font-bold"
-            placeholder="0"
+            class="w-full px-3 py-2 text-sm font-black text-center font-mono rounded-xl bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary"
+            placeholder="Monto entregado por cliente..."
           />
-          <p v-if="modalCobro.pagaCon >= modalCobro.valorTotal" class="text-xs font-bold text-success">
-            Vuelto: ${{ (modalCobro.pagaCon - modalCobro.valorTotal).toLocaleString() }}
-          </p>
+
+          <!-- Cálculo Dinámico de Vuelto / Cambio -->
+          <div v-if="modalCobro.pagaCon >= modalCobro.valorTotal" class="p-2.5 rounded-xl badge-pastel-mint flex items-center justify-between shadow-xs">
+            <span class="text-xs font-bold flex items-center space-x-1.5">
+              <span>💵</span>
+              <span>Cambio a Devolver:</span>
+            </span>
+            <span class="font-mono font-black text-sm num-tabular">${{ (modalCobro.pagaCon - modalCobro.valorTotal).toLocaleString() }}</span>
+          </div>
+          <div v-else-if="modalCobro.pagaCon > 0" class="p-2 rounded-xl badge-pastel-amber text-xs font-bold text-center">
+            Faltan ${{ (modalCobro.valorTotal - modalCobro.pagaCon).toLocaleString() }} para completar el total
+          </div>
         </div>
 
         <div class="flex space-x-2 pt-2">
           <button 
             type="button" 
             @click="modalCobro = null" 
-            class="w-1/3 py-2 text-xs font-semibold rounded-xl border border-border text-text-secondary hover:bg-surface-elevated"
+            class="w-1/3 py-2.5 text-xs font-semibold rounded-xl border border-border text-text-secondary hover:bg-surface-elevated transition-colors"
           >
             Cancelar
           </button>
           <button 
             @click="confirmarSalida"
             :disabled="guardandoSalida"
-            class="w-2/3 py-2 text-xs font-bold rounded-xl bg-primary text-white hover:opacity-90 shadow-md disabled:opacity-50"
+            class="w-2/3 py-2.5 text-xs font-bold rounded-xl btn-craft-success text-white shadow-md disabled:opacity-50 flex items-center justify-center space-x-1.5"
           >
-            {{ guardandoSalida ? 'Cobrando...' : 'Confirmar Cobro' }}
+            <svg v-if="guardandoSalida" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span>{{ guardandoSalida ? 'Cobrando...' : 'Confirmar Salida y Cobro' }}</span>
           </button>
         </div>
       </div>
@@ -421,6 +521,14 @@ function formatearHora(iso) {
 function calcularMinutos(entradaIso) {
   const ms = Date.now() - new Date(entradaIso).getTime()
   return Math.max(1, Math.round(ms / 60000))
+}
+
+function formatearTiempoEstancia(min) {
+  if (!min || min < 1) return '1 min'
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
 function estimarCobro(v) {

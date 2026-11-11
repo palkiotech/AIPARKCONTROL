@@ -2,43 +2,96 @@
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h2 class="text-xl md:text-2xl font-bold">Mensualidades</h2>
-        <p class="text-xs md:text-sm text-text-secondary">Control de clientes mensuales, agenda de cobro y vencimientos.</p>
+        <h2 class="text-xl md:text-2xl font-black text-text-primary">Mensualidades y Abonados</h2>
+        <p class="text-xs md:text-sm text-text-secondary">Control de cartera de abonados, agenda de cobro preventivo y renovaciones.</p>
       </div>
 
       <div>
         <button 
           @click="mostrarModalNueva = true"
-          class="px-4 py-2.5 bg-primary text-white font-bold rounded-xl text-xs sm:text-sm shadow-md hover:opacity-90 flex items-center space-x-1.5"
+          class="px-4 py-2.5 btn-craft-primary text-white font-bold rounded-xl text-xs sm:text-sm shadow-sm flex items-center space-x-1.5"
         >
-          <span>+ Nueva Mensualidad</span>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Nueva Mensualidad</span>
         </button>
       </div>
     </div>
 
-    <!-- Feedback -->
-    <div v-if="mensajeExito" class="p-3 rounded-lg bg-success-bg text-success text-xs font-semibold border border-success/20">
+    <!-- Feedback de Estado -->
+    <div v-if="mensajeExito" class="p-3.5 rounded-xl badge-pastel-mint text-xs font-semibold shadow-xs">
       {{ mensajeExito }}
     </div>
-    <div v-if="errorMensaje" class="p-3 rounded-lg bg-danger-bg text-danger text-xs font-semibold border border-danger/20">
+    <div v-if="errorMensaje" class="p-3.5 rounded-xl badge-pastel-rose text-xs font-semibold shadow-xs">
       {{ errorMensaje }}
     </div>
 
-    <!-- Pestañas Agenda vs Todas -->
-    <div class="flex border-b border-border space-x-4 text-xs font-bold">
+    <!-- TARJETAS DE RESUMEN DE CARTERA MENSUAL EN PASTELES SUAVES -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <!-- Vencidas -->
+      <div class="card-craft pastel-card-rose p-4 sm:p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-black uppercase tracking-wider text-rose-800 dark:text-rose-300">Vencidas</span>
+          <span class="badge-pastel-rose text-[10px] font-black px-2 py-0.5 rounded-full">En Mora</span>
+        </div>
+        <div class="mt-2.5 flex items-baseline space-x-2">
+          <span class="text-3xl sm:text-4xl font-black text-rose-700 dark:text-rose-400 num-tabular">{{ gruposAgenda.vencidas.length }}</span>
+          <span class="text-xs font-bold text-text-muted">clientes</span>
+        </div>
+        <p class="text-xs font-black text-rose-700 dark:text-rose-300 mt-2 font-mono num-tabular">
+          ${{ gruposAgenda.vencidas.reduce((acc, m) => acc + (m.planes_mensuales?.valor || 0), 0).toLocaleString() }} <span class="font-sans font-normal text-text-muted">por cobrar</span>
+        </p>
+      </div>
+
+      <!-- Vencen Hoy o Pronto -->
+      <div class="card-craft pastel-card-amber p-4 sm:p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">Vencen Próximamente</span>
+          <span class="badge-pastel-amber text-[10px] font-black px-2 py-0.5 rounded-full">Alerta 7d</span>
+        </div>
+        <div class="mt-2.5 flex items-baseline space-x-2">
+          <span class="text-3xl sm:text-4xl font-black text-amber-700 dark:text-amber-400 num-tabular">{{ gruposAgenda.urgentes.length }}</span>
+          <span class="text-xs font-bold text-text-muted">clientes</span>
+        </div>
+        <p class="text-xs font-black text-amber-700 dark:text-amber-300 mt-2 font-mono num-tabular">
+          ${{ gruposAgenda.urgentes.reduce((acc, m) => acc + (m.planes_mensuales?.valor || 0), 0).toLocaleString() }} <span class="font-sans font-normal text-text-muted">por vencer</span>
+        </p>
+      </div>
+
+      <!-- Al Día -->
+      <div class="card-craft pastel-card-mint p-4 sm:p-5 relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Vigentes Al Día</span>
+          <span class="badge-pastel-mint text-[10px] font-black px-2 py-0.5 rounded-full">Activas</span>
+        </div>
+        <div class="mt-2.5 flex items-baseline space-x-2">
+          <span class="text-3xl sm:text-4xl font-black text-emerald-700 dark:text-emerald-400 num-tabular">{{ gruposAgenda.alDia.length }}</span>
+          <span class="text-xs font-bold text-text-muted">al día</span>
+        </div>
+        <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mt-2">
+          Sin mora activa
+        </p>
+      </div>
+    </div>
+
+    <!-- Pestañas Tipo Pastilla con Navegación Táctil -->
+    <div class="flex p-1 bg-surface-elevated/70 rounded-xl border border-border w-fit space-x-1">
       <button 
         @click="pestañaActiva = 'agenda'"
-        class="pb-2 border-b-2 transition-colors uppercase tracking-wider"
-        :class="pestañaActiva === 'agenda' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-primary'"
+        class="px-4 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-wider flex items-center space-x-2"
+        :class="pestañaActiva === 'agenda' ? 'bg-surface text-primary shadow-xs font-black' : 'text-text-muted hover:text-text-primary'"
       >
-        📅 Agenda de Vencimientos
+        <span>📅</span>
+        <span>Agenda de Vencimientos</span>
       </button>
       <button 
         @click="pestañaActiva = 'todas'"
-        class="pb-2 border-b-2 transition-colors uppercase tracking-wider"
-        :class="pestañaActiva === 'todas' ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-primary'"
+        class="px-4 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-wider flex items-center space-x-2"
+        :class="pestañaActiva === 'todas' ? 'bg-surface text-primary shadow-xs font-black' : 'text-text-muted hover:text-text-primary'"
       >
-        Todas las Mensualidades ({{ mensualidades.length }})
+        <span>👥</span>
+        <span>Directorio de Abonados ({{ mensualidades.length }})</span>
       </button>
     </div>
 
@@ -49,110 +102,226 @@
     </div>
 
     <!-- Estado Vacío Cuando no hay registros -->
-    <div v-else-if="mensualidades.length === 0" class="bg-surface rounded-2xl border border-border p-10 text-center space-y-3 shadow-sm">
-      <div class="w-12 h-12 mx-auto rounded-full bg-surface-elevated flex items-center justify-center text-text-muted text-xl">
+    <div v-else-if="mensualidades.length === 0" class="card-craft p-10 text-center space-y-3">
+      <div class="w-12 h-12 mx-auto rounded-full bg-surface-elevated flex items-center justify-center text-text-muted text-xl shadow-xs">
         📅
       </div>
       <h4 class="font-bold text-sm text-text-primary">No hay mensualidades registradas</h4>
       <p class="text-xs text-text-secondary max-w-sm mx-auto">
         Aún no has registrado clientes mensuales en este parqueadero. Haz clic en el botón de abajo para registrar el primero.
       </p>
-      <button @click="mostrarModalNueva = true" class="btn-primary text-xs mx-auto inline-block">
+      <button @click="mostrarModalNueva = true" class="btn-craft-primary px-4 py-2 rounded-xl text-xs mx-auto inline-block text-white font-bold">
         + Registrar Primera Mensualidad
       </button>
     </div>
 
-    <!-- VISTA 1: AGENDA DE VENCIMIENTOS (HU-17) -->
+    <!-- VISTA 1: AGENDA DE VENCIMIENTOS (HU-17) CON CARNÉ DE ABONADO -->
     <div v-else-if="pestañaActiva === 'agenda'" class="space-y-6">
-      <!-- Sección: Vencidas (Rojo) -->
-      <div v-if="gruposAgenda.vencidas.length" class="space-y-2.5">
-        <h3 class="text-xs font-black uppercase tracking-wider text-danger flex items-center space-x-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-danger animate-pulse"></span>
-          <span>Vencidas ({{ gruposAgenda.vencidas.length }})</span>
-        </h3>
-        <div class="grid grid-cols-1 gap-2.5">
-          <div v-for="m in gruposAgenda.vencidas" :key="m.id" class="card-craft p-4 border-l-4 border-l-danger">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center space-x-2.5">
-                  <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
-                  <span class="plate-colombia plate-carro text-[10px]">
-                    {{ m.vehiculos?.placa }}
-                  </span>
+      <!-- Sección: Vencidas (Pastel Rosa / Coral) -->
+      <div v-if="gruposAgenda.vencidas.length" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-black uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+            <span>Clientes Vencidos en Mora ({{ gruposAgenda.vencidas.length }})</span>
+          </h3>
+          <span class="badge-pastel-rose text-[10px] font-black px-2 py-0.5 rounded-full">Prioridad Alta</span>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3">
+          <div 
+            v-for="m in gruposAgenda.vencidas" 
+            :key="m.id" 
+            class="card-craft pastel-card-rose p-4 sm:p-5 relative overflow-hidden transition-all"
+          >
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <!-- Información del Cliente y Vehículo -->
+              <div class="flex items-start space-x-3.5">
+                <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-200 font-black flex items-center justify-center text-sm shadow-xs border border-rose-200 dark:border-rose-800/40 flex-shrink-0">
+                  {{ (m.clientes?.nombre || 'C').charAt(0).toUpperCase() }}
                 </div>
-                <p class="text-xs text-text-secondary mt-1">
-                  Venció el {{ m.fecha_fin }} <strong class="text-danger font-black">({{ m.clasificacion.diasMora }} días de mora)</strong> · 
-                  <a :href="`tel:${m.clientes?.telefono}`" class="text-primary hover:underline font-bold">📞 {{ m.clientes?.telefono || 'Sin teléfono' }}</a>
-                </p>
-                <p class="text-[11px] text-text-muted mt-0.5">
-                  Aviso: <strong>{{ m.ultimoAviso ? `${m.ultimoAviso.medio} (${m.ultimoAviso.nota || 'Sin nota'})` : 'Sin avisar todavía' }}</strong>
-                </p>
+
+                <div class="space-y-1">
+                  <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
+                    <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
+                    <span class="plate-colombia plate-carro text-[10px]">
+                      {{ m.vehiculos?.placa }}
+                    </span>
+                    <span class="badge-pastel-rose text-[10px] font-black px-2 py-0.5 rounded-full">
+                      {{ m.clasificacion.diasMora }} días de mora
+                    </span>
+                  </div>
+
+                  <p class="text-xs text-text-secondary flex items-center space-x-2 flex-wrap">
+                    <span>Venció el: <strong>{{ m.fecha_fin }}</strong></span>
+                    <span>·</span>
+                    <!-- Enlace directo con WhatsApp -->
+                    <a 
+                      :href="generarLinkWhatsApp(m)" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center space-x-1 text-emerald-700 dark:text-emerald-400 font-bold hover:underline bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/40 text-[11px]"
+                      title="Abrir chat en WhatsApp para avisar cobro"
+                    >
+                      <span>💬 WhatsApp</span>
+                      <span>{{ m.clientes?.telefono || 'Sin teléfono' }}</span>
+                    </a>
+                  </p>
+
+                  <p class="text-[11px] text-text-muted">
+                    Último aviso: <strong>{{ m.ultimoAviso ? `${m.ultimoAviso.medio} (${m.ultimoAviso.nota || 'Sin nota'})` : 'Sin avisar todavía' }}</strong>
+                  </p>
+                </div>
               </div>
 
+              <!-- Valor y Acciones de Cobro -->
               <div class="flex items-center space-x-2.5 self-end sm:self-center">
-                <span class="font-mono font-black text-text-primary text-sm mr-2 num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
-                <button @click="abrirAviso(m)" class="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary text-xs font-semibold transition-all">Avisar</button>
-                <button @click="abrirPago(m)" class="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all active:scale-95">Pagar</button>
+                <div class="text-right mr-2">
+                  <span class="block text-[10px] font-bold text-text-muted uppercase">Plan Mensual</span>
+                  <span class="font-mono font-black text-text-primary text-base num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
+                </div>
+                <button 
+                  @click="abrirAviso(m)" 
+                  class="px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-text-primary text-xs font-bold transition-all shadow-xs"
+                >
+                  Registrar Aviso
+                </button>
+                <button 
+                  @click="abrirPago(m)" 
+                  class="px-4 py-2 rounded-xl btn-craft-success text-white text-xs font-bold shadow-xs transition-all active:scale-95 inline-flex items-center space-x-1.5"
+                >
+                  <span>✓</span>
+                  <span>Registrar Pago</span>
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Sección: Vencen Hoy / Mañana (Amarillo) -->
-      <div v-if="gruposAgenda.urgentes.length" class="space-y-2.5">
-        <h3 class="text-xs font-black uppercase tracking-wider text-warning flex items-center space-x-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-warning"></span>
-          <span>Vencen Hoy o Próximamente ({{ gruposAgenda.urgentes.length }})</span>
-        </h3>
-        <div class="grid grid-cols-1 gap-2.5">
-          <div v-for="m in gruposAgenda.urgentes" :key="m.id" class="card-craft p-4 border-l-4 border-l-warning">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center space-x-2.5">
-                  <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
-                  <span class="plate-colombia plate-carro text-[10px]">
-                    {{ m.vehiculos?.placa }}
-                  </span>
+      <!-- Sección: Vencen Hoy / Próximamente (Pastel Ámbar) -->
+      <div v-if="gruposAgenda.urgentes.length" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            <span>Vencen Hoy o en los Próximos 7 Días ({{ gruposAgenda.urgentes.length }})</span>
+          </h3>
+          <span class="badge-pastel-amber text-[10px] font-black px-2 py-0.5 rounded-full">Cobro Preventivo</span>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3">
+          <div 
+            v-for="m in gruposAgenda.urgentes" 
+            :key="m.id" 
+            class="card-craft pastel-card-amber p-4 sm:p-5 relative overflow-hidden transition-all"
+          >
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-start space-x-3.5">
+                <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200 font-black flex items-center justify-center text-sm shadow-xs border border-amber-200 dark:border-amber-800/40 flex-shrink-0">
+                  {{ (m.clientes?.nombre || 'C').charAt(0).toUpperCase() }}
                 </div>
-                <p class="text-xs text-text-secondary mt-1">
-                  Vence: <strong :class="m.clasificacion.esHoy ? 'text-danger font-black' : 'text-warning font-black'">{{ m.clasificacion.esHoy ? '¡HOY!' : `en ${m.clasificacion.diasRestantes} días (${m.fecha_fin})` }}</strong> · 
-                  <a :href="`tel:${m.clientes?.telefono}`" class="text-primary hover:underline font-bold">📞 {{ m.clientes?.telefono }}</a>
-                </p>
-                <p class="text-[11px] text-text-muted mt-0.5">
-                  Aviso: <strong>{{ m.ultimoAviso ? `${m.ultimoAviso.medio} · ${formatearHora(m.ultimoAviso.created_at)}` : 'Sin avisar todavía' }}</strong>
-                </p>
+
+                <div class="space-y-1">
+                  <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
+                    <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
+                    <span class="plate-colombia plate-carro text-[10px]">
+                      {{ m.vehiculos?.placa }}
+                    </span>
+                    <span 
+                      class="text-[10px] font-black px-2 py-0.5 rounded-full"
+                      :class="m.clasificacion.esHoy ? 'badge-pastel-rose' : 'badge-pastel-amber'"
+                    >
+                      {{ m.clasificacion.esHoy ? '¡VENCE HOY!' : `Vence en ${m.clasificacion.diasRestantes} días` }}
+                    </span>
+                  </div>
+
+                  <p class="text-xs text-text-secondary flex items-center space-x-2 flex-wrap">
+                    <span>Fecha límite: <strong>{{ m.fecha_fin }}</strong></span>
+                    <span>·</span>
+                    <a 
+                      :href="generarLinkWhatsApp(m)" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center space-x-1 text-emerald-700 dark:text-emerald-400 font-bold hover:underline bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/40 text-[11px]"
+                    >
+                      <span>💬 WhatsApp</span>
+                      <span>{{ m.clientes?.telefono || 'Sin teléfono' }}</span>
+                    </a>
+                  </p>
+
+                  <p class="text-[11px] text-text-muted">
+                    Último aviso: <strong>{{ m.ultimoAviso ? `${m.ultimoAviso.medio} · ${formatearHora(m.ultimoAviso.created_at)}` : 'Sin avisar todavía' }}</strong>
+                  </p>
+                </div>
               </div>
 
               <div class="flex items-center space-x-2.5 self-end sm:self-center">
-                <span class="font-mono font-black text-text-primary text-sm mr-2 num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
-                <button @click="abrirAviso(m)" class="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary text-xs font-semibold transition-all">Avisar</button>
-                <button @click="abrirPago(m)" class="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all active:scale-95">Pagar</button>
+                <div class="text-right mr-2">
+                  <span class="block text-[10px] font-bold text-text-muted uppercase">Plan Mensual</span>
+                  <span class="font-mono font-black text-text-primary text-base num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
+                </div>
+                <button 
+                  @click="abrirAviso(m)" 
+                  class="px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-text-primary text-xs font-bold transition-all shadow-xs"
+                >
+                  Registrar Aviso
+                </button>
+                <button 
+                  @click="abrirPago(m)" 
+                  class="px-4 py-2 rounded-xl btn-craft-success text-white text-xs font-bold shadow-xs transition-all active:scale-95 inline-flex items-center space-x-1.5"
+                >
+                  <span>✓</span>
+                  <span>Registrar Pago</span>
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Sección: Al Día (Verde) -->
-      <div v-if="gruposAgenda.alDia.length" class="space-y-2.5">
-        <h3 class="text-xs font-black uppercase tracking-wider text-success flex items-center space-x-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-success"></span>
-          <span>Al Día ({{ gruposAgenda.alDia.length }})</span>
+      <!-- Sección: Al Día (Pastel Menta) -->
+      <div v-if="gruposAgenda.alDia.length" class="space-y-3">
+        <h3 class="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center space-x-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <span>Abonados al Día ({{ gruposAgenda.alDia.length }})</span>
         </h3>
-        <div class="grid grid-cols-1 gap-2.5">
-          <div v-for="m in gruposAgenda.alDia" :key="m.id" class="card-craft p-4 border-l-4 border-l-success">
+
+        <div class="grid grid-cols-1 gap-3">
+          <div 
+            v-for="m in gruposAgenda.alDia" 
+            :key="m.id" 
+            class="card-craft pastel-card-mint p-4 sm:p-5 relative overflow-hidden transition-all"
+          >
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center space-x-2.5">
-                  <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
-                  <span class="plate-colombia plate-carro text-[10px]">
-                    {{ m.vehiculos?.placa }}
-                  </span>
+              <div class="flex items-start space-x-3.5">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200 font-black flex items-center justify-center text-sm shadow-xs border border-emerald-200 dark:border-emerald-800/40 flex-shrink-0">
+                  {{ (m.clientes?.nombre || 'C').charAt(0).toUpperCase() }}
                 </div>
-                <p class="text-xs text-text-secondary mt-1">Vigente hasta: {{ m.fecha_fin }} (en {{ m.clasificacion.diasRestantes }} días)</p>
+
+                <div>
+                  <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
+                    <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
+                    <span class="plate-colombia plate-carro text-[10px]">
+                      {{ m.vehiculos?.placa }}
+                    </span>
+                    <span class="badge-pastel-mint text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      Vigente
+                    </span>
+                  </div>
+                  <p class="text-xs text-text-secondary mt-1">
+                    Vigente hasta el <strong>{{ m.fecha_fin }}</strong> (le quedan {{ m.clasificacion.diasRestantes }} días) · Plan {{ m.planes_mensuales?.nombre }}
+                  </p>
+                </div>
               </div>
-              <span class="font-mono font-black text-text-primary text-sm num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
+
+              <div class="flex items-center space-x-3 self-end sm:self-center">
+                <span class="font-mono font-black text-text-primary text-base num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
+                <button 
+                  @click="abrirPago(m)" 
+                  class="px-3.5 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-text-primary text-xs font-bold transition-all shadow-xs"
+                >
+                  Renovar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -440,6 +609,27 @@ const gruposAgenda = computed(() => {
 function formatearHora(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
+function generarLinkWhatsApp(m) {
+  const tel = (m.clientes?.telefono || '').replace(/\D/g, '')
+  if (!tel) return '#'
+  const numeroCompleto = tel.startsWith('57') ? tel : `57${tel}`
+  const nombreCliente = m.clientes?.nombre || 'Cliente'
+  const placa = m.vehiculos?.placa || ''
+  const pqNombre = authStore.parqueadero?.nombre || 'el parqueadero'
+  const valor = (m.planes_mensuales?.valor || 0).toLocaleString()
+  const diasMora = m.clasificacion?.diasMora || 0
+  
+  let texto = ''
+  if (m.clasificacion?.esHoy) {
+    texto = `Hola ${nombreCliente}, cordial saludo de ${pqNombre}. Te informamos amablemente que tu mensualidad del vehículo ${placa} vence el día de HOY. El valor es de $${valor} COP. ¡Quedamos atentos a tu renovación!`
+  } else if (diasMora > 0) {
+    texto = `Hola ${nombreCliente}, cordial saludo de ${pqNombre}. Te recordamos amablemente que tu mensualidad del vehículo ${placa} presenta ${diasMora} días de vencimiento (fecha límite ${m.fecha_fin}). El valor a cancelar es $${valor} COP. ¿Deseas renovar tu cupo hoy? ¡Muchas gracias!`
+  } else {
+    texto = `Hola ${nombreCliente}, cordial saludo de ${pqNombre}. Te recordamos que la mensualidad del vehículo ${placa} vencerá el ${m.fecha_fin}. El valor a renovar es $${valor} COP. ¡Feliz día!`
+  }
+  return `https://wa.me/${numeroCompleto}?text=${encodeURIComponent(texto)}`
 }
 
 async function cargarTodo() {

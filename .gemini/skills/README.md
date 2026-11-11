@@ -1,6 +1,6 @@
 # AI PARKCONTROL — Skills de Ingeniería
 
-Este directorio contiene las dos habilidades (`SKILL.md`) esenciales seleccionadas para asegurar la calidad profesional de **ParkControl**:
+Este directorio contiene las 4 habilidades (`SKILL.md`) esenciales seleccionadas para asegurar la calidad profesional de **ParkControl**:
 
 ---
 
@@ -18,3 +18,19 @@ Este directorio contiene las dos habilidades (`SKILL.md`) esenciales seleccionad
 * **Uso práctico:**
   - Garantizar la **Regla #4 del plan**: que el motor de cobro local en JavaScript (`src/domain/cobro.js`) y la función RPC en Supabase calculen **exactamente el mismo valor**.
   - Escribir pruebas unitarias con Vitest antes de programar la lógica de negocio (minutos de gracia, cambio a franja nocturna, fracciones de hora, topes de 24h).
+
+## 3. `frontend-design`
+* **Archivo:** `SKILL.md`
+* **Rol:** Dirección de diseño UI/UX y creación de interfaces de alto impacto.
+* **Uso práctico:**
+  - Erradicar la "UI genérica de IA" (tarjetas grises aburridas) e implementar una estética intencional de producto SaaS.
+  - Diseñar con ergonomía mobile-first: botones táctiles amplios (≥48px) para uso con una sola mano en patio y alto contraste visual para visibilidad bajo la luz solar.
+  - Jerarquía visual estricta para números críticos (placa, tiempo, total a pagar).
+
+## 4. `tailwind-patterns`
+* **Archivo:** `SKILL.md`
+* **Rol:** Patrones de maquetación y arquitectura con Tailwind CSS.
+* **Uso práctico:**
+  - Layouts modernos con Bento Grids y flexbox limpio sin clases arbitrarias dispersas.
+  - Arquitectura de tokens y configuración estricta de `darkMode: 'class'` con paletas semánticas (*Zinc/Slate*).
+  - Maquetación y estilos de impresión térmica (`@page` para tickets de 58 mm y 80 mm).
