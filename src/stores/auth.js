@@ -22,6 +22,17 @@ export const useAuthStore = defineStore('auth', () => {
   async function inicializarSesion() {
     loading.value = true
     try {
+      // 1. Intentar sesión local en caché (para demo u offline)
+      const cached = authService.obtenerPerfilCacheado()
+      if (cached && cached.activo) {
+        profile.value = cached.usuario
+        parqueadero.value = cached.parqueadero
+        session.value = { user: { id: cached.usuario.id } }
+        loading.value = false
+        return
+      }
+
+      // 2. Si no hay caché, consultar Supabase Auth
       const { data: { session: currentSession } } = await supabase.auth.getSession()
       if (currentSession) {
         session.value = currentSession
@@ -53,6 +64,35 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Acceso rápido de demostración para exploración local
+   */
+  function entrarComoDemo(rol = 'admin') {
+    const perfilesDemo = {
+      superadmin: {
+        activo: true,
+        usuario: { id: 'demo-superadmin', nombre: 'Alejandro (Superadmin)', rol: 'superadmin', parqueadero_id: null },
+        parqueadero: null
+      },
+      admin: {
+        activo: true,
+        usuario: { id: 'demo-admin', nombre: 'Alejandro (Dueño)', rol: 'admin', parqueadero_id: 'pq-demo-001' },
+        parqueadero: { id: 'pq-demo-001', nombre: 'Parqueadero Central', nit: '900.123.456-7', estado: 'activo' }
+      },
+      operador: {
+        activo: true,
+        usuario: { id: 'demo-operador', nombre: 'Juan (Portero)', rol: 'operador', parqueadero_id: 'pq-demo-001' },
+        parqueadero: { id: 'pq-demo-001', nombre: 'Parqueadero Central', nit: '900.123.456-7', estado: 'activo' }
+      }
+    }
+
+    const elegido = perfilesDemo[rol] || perfilesDemo.admin
+    session.value = { user: { id: elegido.usuario.id, email: `${rol}@parkcontrol.com` } }
+    profile.value = elegido.usuario
+    parqueadero.value = elegido.parqueadero
+    authService.guardarPerfilCacheado(elegido)
+  }
+
   async function logout() {
     await authService.logout()
     session.value = null
@@ -73,6 +113,7 @@ export const useAuthStore = defineStore('auth', () => {
     isOperador,
     inicializarSesion,
     login,
+    entrarComoDemo,
     logout
   }
 })
