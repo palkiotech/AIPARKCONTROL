@@ -38,14 +38,28 @@
         </div>
       </div>
 
-      <div class="flex items-center space-x-3">
-        <!-- Indicador de Conexión Offline / Online (HU-26) -->
-        <div class="flex items-center text-xs px-2.5 py-1 rounded-full font-medium"
-             :class="conexionStore.isOnline ? 'bg-success-bg text-success' : 'bg-warning-bg text-warning'">
-          <span class="w-2 h-2 rounded-full mr-1.5" :class="conexionStore.isOnline ? 'bg-success' : 'bg-warning animate-pulse'"></span>
-          <span>
-            {{ conexionStore.isOnline ? 'En línea' : `Sin conexión · ${conexionStore.pendingOperationsCount} pend.` }}
-          </span>
+      <div class="flex items-center space-x-2.5">
+        <!-- Indicador de Conexión Offline / Online y Botón Sincronizar (HU-26) -->
+        <div class="flex items-center space-x-1.5">
+          <div 
+            class="flex items-center text-xs px-2.5 py-1 rounded-full font-medium"
+            :class="conexionStore.isOnline ? 'bg-success-bg text-success' : 'bg-warning-bg text-warning'"
+          >
+            <span class="w-2 h-2 rounded-full mr-1.5" :class="conexionStore.isOnline ? 'bg-success' : 'bg-warning animate-pulse'"></span>
+            <span>
+              {{ conexionStore.isOnline ? (conexionStore.pendingOperationsCount > 0 ? `${conexionStore.pendingOperationsCount} pendientes` : 'En línea') : `Sin conexión · ${conexionStore.pendingOperationsCount} pend.` }}
+            </span>
+          </div>
+
+          <!-- Botón Sincronizar ahora -->
+          <button 
+            v-if="conexionStore.pendingOperationsCount > 0 && conexionStore.isOnline"
+            @click="ejecutarSincronizacion"
+            :disabled="sincronizandoManual"
+            class="text-[11px] font-bold px-2 py-1 rounded-lg bg-primary text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {{ sincronizandoManual ? 'Sincronizando...' : 'Sincronizar ahora' }}
+          </button>
         </div>
 
         <!-- Selector de Tema (HU-10) -->
@@ -125,9 +139,11 @@
             v-if="authStore.isAdmin"
             to="/ajustes" 
             class="flex items-center px-3 py-2 text-sm rounded-lg font-medium transition-colors"
-            :class="$route.name === 'ajustes' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated'"
+            :class="!conexionStore.isOnline ? 'opacity-50 pointer-events-none' : ($route.name === 'ajustes' ? 'bg-primary text-white' : 'text-text-secondary hover:bg-surface-elevated')"
+            :title="!conexionStore.isOnline ? 'Ajustes requiere conexión a internet' : ''"
           >
-            Ajustes
+            <span>Ajustes</span>
+            <span v-if="!conexionStore.isOnline" class="ml-auto text-[10px] text-warning">Online</span>
           </router-link>
         </template>
       </aside>
@@ -184,7 +200,7 @@
           v-if="authStore.isAdmin"
           to="/ajustes" 
           class="flex flex-col items-center py-1 px-2 text-xs"
-          :class="$route.name === 'ajustes' ? 'text-primary font-bold' : 'text-text-muted'"
+          :class="!conexionStore.isOnline ? 'opacity-40 pointer-events-none' : ($route.name === 'ajustes' ? 'text-primary font-bold' : 'text-text-muted')"
         >
           <span>Ajustes</span>
         </router-link>
@@ -194,19 +210,32 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTemaStore } from '@/stores/tema'
 import { useConexionStore } from '@/stores/conexion'
 import { useAuthStore } from '@/stores/auth'
+import { sincronizarAhora } from '@/offline/sync'
 
 const router = useRouter()
 const temaStore = useTemaStore()
 const conexionStore = useConexionStore()
 const authStore = useAuthStore()
 
+const sincronizandoManual = ref(false)
+
 function toggleTheme() {
   const next = temaStore.isDark ? 'light' : 'dark'
   temaStore.setTheme(next)
+}
+
+async function ejecutarSincronizacion() {
+  sincronizandoManual.value = true
+  try {
+    await sincronizarAhora(conexionStore)
+  } finally {
+    sincronizandoManual.value = false
+  }
 }
 
 async function handleLogout() {

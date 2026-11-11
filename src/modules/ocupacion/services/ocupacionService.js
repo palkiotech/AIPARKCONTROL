@@ -1,23 +1,30 @@
 import { supabase } from '@/lib/supabase'
 import { normalizarPlaca } from '@/utils/placa'
 import { getAdjustedNowISO } from '@/offline/clockDrift'
-import { calcularCobroBase } from '@/domain/cobro'
+import { encolarOperacion } from '@/offline/cola'
 
-// Mock en memoria local cuando se ejecuta sin conexión remota
+// Caché reactivo en memoria local para renderizado inmediato
 const patioLocal = []
 
 export const ocupacionService = {
   /**
    * Registra la entrada de un vehículo en patio (HU-11)
+   * Si no hay conexión, se encola en IndexedDB (HU-26)
    */
-  async registrarEntrada({ placa, tipoVehiculoId, tarifaId = null, horaDispositivo = null }) {
+  async registrarEntrada({ placa, tipoVehiculoId, tarifaId = null }) {
     const placaLimpia = normalizarPlaca(placa)
-    const timestampAjustado = horaDispositivo || getAdjustedNowISO()
+    const timestampAjustado = getAdjustedNowISO()
 
-    // Si no hay conexión o estamos en modo local sin Supabase activo
+    // Operación sin conexión (HU-26)
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const op = await encolarOperacion('entrada', {
+        placa: placaLimpia,
+        tipoVehiculoId,
+        tarifaId
+      })
+
       const entradaOffline = {
-        id: crypto.randomUUID(),
+        id: op.id,
         placa: placaLimpia,
         tipo_vehiculo_id: tipoVehiculoId,
         tarifa_id: tarifaId,
@@ -40,9 +47,14 @@ export const ocupacionService = {
       if (error) throw error
       return data
     } catch (err) {
-      // Si falla la red, guardar en patio local
+      // Respaldo de contingencia: si la red falla a mitad de la petición, encolar en Dexie
+      const op = await encolarOperacion('entrada', {
+        placa: placaLimpia,
+        tipoVehiculoId,
+        tarifaId
+      })
       const entradaRespaldo = {
-        id: crypto.randomUUID(),
+        id: op.id,
         placa: placaLimpia,
         tipo_vehiculo_id: tipoVehiculoId,
         tarifa_id: tarifaId,
@@ -56,7 +68,7 @@ export const ocupacionService = {
   },
 
   /**
-   * Obtiene los vehículos presentes en patio y calcula minutos transcurridos (HU-12)
+   * Obtiene los vehículos presentes en patio (HU-12)
    */
   async obtenerVehiculosDentro(parqueaderoId) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -80,9 +92,17 @@ export const ocupacionService = {
 
   /**
    * Registra la salida y cobro de un vehículo (HU-13)
+   * Si no hay conexión, se encola en IndexedDB (HU-26)
    */
   async registrarSalida({ registroId, metodoPagoId, tarifaId, valorCobrado }) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await encolarOperacion('salida', {
+        registroId,
+        metodoPagoId,
+        tarifaId,
+        valorCobrado
+      })
+
       const item = patioLocal.find(v => v.id === registroId)
       if (item) {
         item.estado = 'cerrado'
@@ -92,14 +112,30 @@ export const ocupacionService = {
       return { success: true, valor: valorCobrado }
     }
 
-    const { data, error } = await supabase.rpc('registrar_salida', {
-      p_registro_id: registroId,
-      p_metodo_pago_id: metodoPagoId,
-      p_tarifa_id: tarifaId,
-      p_valor_cobrado: valorCobrado
-    })
-    if (error) throw error
-    return data
+    try {
+      const { data, error } = await supabase.rpc('registrar_salida', {
+        p_registro_id: registroId,
+        p_metodo_pago_id: metodoPagoId,
+        p_tarifa_id: tarifaId,
+        p_valor_cobrado: valorCobrado
+      })
+      if (error) throw error
+      return data
+    } catch (err) {
+      await encolarOperacion('salida', {
+        registroId,
+        metodoPagoId,
+        tarifaId,
+        valorCobrado
+      })
+      const item = patioLocal.find(v => v.id === registroId)
+      if (item) {
+        item.estado = 'cerrado'
+        item.salida_at = getAdjustedNowISO()
+        item.valor = valorCobrado
+      }
+      return { success: true, valor: valorCobrado }
+    }
   },
 
   /**
