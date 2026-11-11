@@ -29,41 +29,54 @@
     </div>
 
     <!-- TARJETAS DE OCUPACIÓN Y CAPACIDAD CON SOBRECUPO (HU-12) -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
       <div 
         v-for="tipo in resumenOcupacion" 
         :key="tipo.id"
-        class="bg-surface p-3.5 rounded-xl border transition-all"
-        :class="tipo.ocupados >= tipo.capacidad ? 'border-warning shadow-sm' : 'border-border'"
+        class="card-craft p-4 relative overflow-hidden"
+        :class="tipo.ocupados >= tipo.capacidad ? 'border-amber-500/50 dark:border-amber-500/40' : ''"
       >
         <div class="flex justify-between items-start">
-          <span class="text-xs font-bold uppercase text-text-secondary">{{ tipo.nombre }}</span>
-          <span v-if="tipo.ocupados >= tipo.capacidad" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-warning-bg text-warning">
-            Lleno
+          <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">{{ tipo.nombre }}</span>
+          <span 
+            class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+            :class="tipo.ocupados >= tipo.capacidad ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'"
+          >
+            {{ tipo.ocupados >= tipo.capacidad ? 'Sobrecupo' : `${tipo.capacidad - tipo.ocupados} libres` }}
           </span>
         </div>
-        <div class="mt-1 flex items-baseline space-x-1">
-          <span class="text-2xl font-black text-text-primary">{{ tipo.ocupados }}</span>
-          <span class="text-xs text-text-muted">/ {{ tipo.capacidad }}</span>
+        
+        <div class="mt-2.5 flex items-baseline space-x-1.5">
+          <span class="text-3xl font-black text-text-primary num-tabular">{{ tipo.ocupados }}</span>
+          <span class="text-xs font-semibold text-text-muted">/ {{ tipo.capacidad }} cupos</span>
         </div>
-        <p class="text-[10px] text-text-secondary mt-1">
-          {{ tipo.ocupados >= tipo.capacidad ? `Sobrecupo (${tipo.ocupados - tipo.capacidad})` : `${tipo.capacidad - tipo.ocupados} libres` }}
-        </p>
+
+        <!-- Barra visual de capacidad -->
+        <div class="mt-3 w-full bg-surface-elevated h-1.5 rounded-full overflow-hidden">
+          <div 
+            class="h-full rounded-full transition-all duration-300"
+            :class="tipo.ocupados >= tipo.capacidad ? 'bg-amber-500' : 'bg-primary'"
+            :style="{ width: Math.min(100, Math.round((tipo.ocupados / (tipo.capacidad || 1)) * 100)) + '%' }"
+          ></div>
+        </div>
       </div>
     </div>
 
     <!-- FILTRO Y LISTA DE VEHÍCULOS DENTRO -->
-    <div class="bg-surface rounded-xl border border-border overflow-hidden space-y-3 p-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 class="font-bold text-sm text-text-primary">
-          Vehículos en Patio ({{ vehiculosDentro.length }})
-        </h3>
+    <div class="card-craft overflow-hidden space-y-3 p-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+        <div>
+          <h3 class="font-black text-sm tracking-tight text-text-primary">
+            Vehículos en Patio ({{ vehiculosDentro.length }})
+          </h3>
+          <p class="text-[11px] text-text-muted">Listado activo con cálculo en tiempo real minuto a minuto.</p>
+        </div>
         <div class="relative w-full sm:w-64">
           <input 
             v-model="filtroPlaca"
             type="text" 
             placeholder="Buscar por placa..."
-            class="w-full px-3 py-1.5 text-xs rounded-lg bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary uppercase"
+            class="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary uppercase font-mono font-semibold"
           />
         </div>
       </div>
@@ -79,40 +92,53 @@
       <!-- Tarjetas en Móvil / Tabla en Desktop -->
       <div v-else class="overflow-x-auto">
         <table class="w-full text-left text-xs">
-          <thead class="bg-surface-elevated text-text-secondary uppercase border-b border-border text-[10px]">
+          <thead class="bg-surface-elevated text-text-secondary uppercase border-b border-border text-[10px] tracking-wider font-bold">
             <tr>
-              <th class="px-3 py-2.5">Placa</th>
-              <th class="px-3 py-2.5">Tipo</th>
-              <th class="px-3 py-2.5">Entrada</th>
-              <th class="px-3 py-2.5">Tiempo</th>
-              <th class="px-3 py-2.5">Est. Cobro</th>
-              <th class="px-3 py-2.5 text-right">Acción</th>
+              <th class="px-3.5 py-2.5">Placa</th>
+              <th class="px-3.5 py-2.5">Tipo</th>
+              <th class="px-3.5 py-2.5">Entrada</th>
+              <th class="px-3.5 py-2.5">Tiempo</th>
+              <th class="px-3.5 py-2.5">Est. Cobro</th>
+              <th class="px-3.5 py-2.5 text-right">Acción</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
-            <tr v-for="v in vehiculosFiltrados" :key="v.id" class="hover:bg-surface-elevated/40">
-              <td class="px-3 py-3 font-mono font-bold text-sm text-primary">
-                {{ v.placa }}
-                <span v-if="v.hora_origen === 'dispositivo'" class="text-[9px] px-1 rounded bg-surface-elevated text-text-muted ml-1 font-sans">
-                  Offline
+            <tr v-for="v in vehiculosFiltrados" :key="v.id" class="hover:bg-surface-elevated/50 transition-colors">
+              <td class="px-3.5 py-3">
+                <div class="flex items-center space-x-2">
+                  <span 
+                    class="plate-colombia text-xs font-mono font-black" 
+                    :class="(v.tipos_vehiculo?.nombre || '').toLowerCase().includes('moto') ? 'plate-moto' : ((v.tipos_vehiculo?.nombre || '').toLowerCase().includes('bici') ? 'plate-bici' : 'plate-carro')"
+                  >
+                    {{ v.placa }}
+                  </span>
+                  <span v-if="v.hora_origen === 'dispositivo'" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    Offline
+                  </span>
+                </div>
+              </td>
+              <td class="px-3.5 py-3 font-medium text-text-secondary">{{ v.tipos_vehiculo?.nombre || 'Vehículo' }}</td>
+              <td class="px-3.5 py-3 text-text-secondary num-tabular font-mono">{{ formatearHora(v.entrada_at) }}</td>
+              <td class="px-3.5 py-3 font-semibold num-tabular">
+                <span class="px-2 py-0.5 rounded bg-surface-elevated text-text-primary text-[11px] font-mono border border-border">
+                  {{ calcularMinutos(v.entrada_at) }} min
                 </span>
               </td>
-              <td class="px-3 py-3">{{ v.tipos_vehiculo?.nombre || 'Vehículo' }}</td>
-              <td class="px-3 py-3 text-text-secondary">{{ formatearHora(v.entrada_at) }}</td>
-              <td class="px-3 py-3 font-semibold">{{ calcularMinutos(v.entrada_at) }} min</td>
-              <td class="px-3 py-3 font-bold text-text-primary">${{ estimarCobro(v).toLocaleString() }}</td>
-              <td class="px-3 py-3 text-right space-x-1">
+              <td class="px-3.5 py-3 font-mono font-black text-sm text-emerald-600 dark:text-emerald-400 num-tabular">
+                ${{ estimarCobro(v).toLocaleString() }}
+              </td>
+              <td class="px-3.5 py-3 text-right space-x-1.5">
                 <button 
                   @click="abrirModalCobro(v)"
-                  class="px-3 py-1.5 rounded-lg bg-primary text-white font-bold text-xs hover:opacity-90"
+                  class="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-sm transition-all active:scale-95"
                 >
                   Cobrar
                 </button>
                 <button 
                   v-if="authStore.isAdmin"
                   @click="abrirModalAnular(v)"
-                  class="px-2 py-1.5 rounded-lg border border-border text-danger hover:bg-danger-bg text-[11px]"
-                  title="Anular registro"
+                  class="px-2.5 py-1.5 rounded-lg border border-border text-danger hover:bg-danger-bg text-[11px] font-semibold transition-colors"
+                  title="Anular registro con motivo"
                 >
                   Anular
                 </button>

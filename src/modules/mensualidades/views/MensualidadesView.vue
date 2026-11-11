@@ -65,34 +65,34 @@
     <!-- VISTA 1: AGENDA DE VENCIMIENTOS (HU-17) -->
     <div v-else-if="pestañaActiva === 'agenda'" class="space-y-6">
       <!-- Sección: Vencidas (Rojo) -->
-      <div v-if="gruposAgenda.vencidas.length" class="space-y-2">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-danger flex items-center space-x-1.5">
-          <span class="w-2.5 h-2.5 rounded-full bg-danger"></span>
+      <div v-if="gruposAgenda.vencidas.length" class="space-y-2.5">
+        <h3 class="text-xs font-black uppercase tracking-wider text-danger flex items-center space-x-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-danger animate-pulse"></span>
           <span>Vencidas ({{ gruposAgenda.vencidas.length }})</span>
         </h3>
         <div class="grid grid-cols-1 gap-2.5">
-          <div v-for="m in gruposAgenda.vencidas" :key="m.id" class="card-mensualidad border-l-4 border-l-danger">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div v-for="m in gruposAgenda.vencidas" :key="m.id" class="card-craft p-4 border-l-4 border-l-danger">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div class="flex items-center space-x-2">
-                  <span class="font-bold text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
-                  <span class="font-mono font-bold text-xs px-2 py-0.5 rounded bg-surface-elevated text-primary">
+                <div class="flex items-center space-x-2.5">
+                  <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
+                  <span class="plate-colombia plate-carro text-[10px]">
                     {{ m.vehiculos?.placa }}
                   </span>
                 </div>
-                <p class="text-xs text-text-secondary mt-0.5">
-                  Venció el {{ m.fecha_fin }} <strong class="text-danger">({{ m.clasificacion.diasMora }} días de mora)</strong> · 
-                  <a :href="`tel:${m.clientes?.telefono}`" class="text-primary hover:underline font-semibold">📞 {{ m.clientes?.telefono || 'Sin teléfono' }}</a>
+                <p class="text-xs text-text-secondary mt-1">
+                  Venció el {{ m.fecha_fin }} <strong class="text-danger font-black">({{ m.clasificacion.diasMora }} días de mora)</strong> · 
+                  <a :href="`tel:${m.clientes?.telefono}`" class="text-primary hover:underline font-bold">📞 {{ m.clientes?.telefono || 'Sin teléfono' }}</a>
                 </p>
-                <p class="text-[11px] text-text-muted mt-1">
-                  Aviso: <strong>{{ m.ultimoAviso ? `${m.ultimoAviso.medio} (${m.ultimoAviso.nota || 'Sin nota'})` : 'Sin avisar' }}</strong>
+                <p class="text-[11px] text-text-muted mt-0.5">
+                  Aviso: <strong>{{ m.ultimoAviso ? `${m.ultimoAviso.medio} (${m.ultimoAviso.nota || 'Sin nota'})` : 'Sin avisar todavía' }}</strong>
                 </p>
               </div>
 
-              <div class="flex items-center space-x-2 self-end sm:self-center">
-                <span class="font-bold text-text-primary text-sm mr-2">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
-                <button @click="abrirAviso(m)" class="btn-secondary text-xs">Avisar</button>
-                <button @click="abrirPago(m)" class="btn-primary text-xs">Pagar</button>
+              <div class="flex items-center space-x-2.5 self-end sm:self-center">
+                <span class="font-mono font-black text-text-primary text-sm mr-2 num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
+                <button @click="abrirAviso(m)" class="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary text-xs font-semibold transition-all">Avisar</button>
+                <button @click="abrirPago(m)" class="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all active:scale-95">Pagar</button>
               </div>
             </div>
           </div>
@@ -100,34 +100,34 @@
       </div>
 
       <!-- Sección: Vencen Hoy / Mañana (Amarillo) -->
-      <div v-if="gruposAgenda.urgentes.length" class="space-y-2">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-warning flex items-center space-x-1.5">
+      <div v-if="gruposAgenda.urgentes.length" class="space-y-2.5">
+        <h3 class="text-xs font-black uppercase tracking-wider text-warning flex items-center space-x-2">
           <span class="w-2.5 h-2.5 rounded-full bg-warning"></span>
           <span>Vencen Hoy o Próximamente ({{ gruposAgenda.urgentes.length }})</span>
         </h3>
         <div class="grid grid-cols-1 gap-2.5">
-          <div v-for="m in gruposAgenda.urgentes" :key="m.id" class="card-mensualidad border-l-4 border-l-warning">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div v-for="m in gruposAgenda.urgentes" :key="m.id" class="card-craft p-4 border-l-4 border-l-warning">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div class="flex items-center space-x-2">
-                  <span class="font-bold text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
-                  <span class="font-mono font-bold text-xs px-2 py-0.5 rounded bg-surface-elevated text-primary">
+                <div class="flex items-center space-x-2.5">
+                  <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
+                  <span class="plate-colombia plate-carro text-[10px]">
                     {{ m.vehiculos?.placa }}
                   </span>
                 </div>
-                <p class="text-xs text-text-secondary mt-0.5">
-                  Vence: <strong :class="m.clasificacion.esHoy ? 'text-danger' : 'text-warning'">{{ m.clasificacion.esHoy ? '¡HOY!' : `en ${m.clasificacion.diasRestantes} días (${m.fecha_fin})` }}</strong> · 
-                  <a :href="`tel:${m.clientes?.telefono}`" class="text-primary hover:underline font-semibold">📞 {{ m.clientes?.telefono }}</a>
+                <p class="text-xs text-text-secondary mt-1">
+                  Vence: <strong :class="m.clasificacion.esHoy ? 'text-danger font-black' : 'text-warning font-black'">{{ m.clasificacion.esHoy ? '¡HOY!' : `en ${m.clasificacion.diasRestantes} días (${m.fecha_fin})` }}</strong> · 
+                  <a :href="`tel:${m.clientes?.telefono}`" class="text-primary hover:underline font-bold">📞 {{ m.clientes?.telefono }}</a>
                 </p>
-                <p class="text-[11px] text-text-muted mt-1">
-                  Aviso: <strong>{{ m.ultimoAviso ? `${m.ultimoAviso.medio} · ${formatearHora(m.ultimoAviso.created_at)}` : 'Sin avisar' }}</strong>
+                <p class="text-[11px] text-text-muted mt-0.5">
+                  Aviso: <strong>{{ m.ultimoAviso ? `${m.ultimoAviso.medio} · ${formatearHora(m.ultimoAviso.created_at)}` : 'Sin avisar todavía' }}</strong>
                 </p>
               </div>
 
-              <div class="flex items-center space-x-2 self-end sm:self-center">
-                <span class="font-bold text-text-primary text-sm mr-2">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
-                <button @click="abrirAviso(m)" class="btn-secondary text-xs">Avisar</button>
-                <button @click="abrirPago(m)" class="btn-primary text-xs">Pagar</button>
+              <div class="flex items-center space-x-2.5 self-end sm:self-center">
+                <span class="font-mono font-black text-text-primary text-sm mr-2 num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
+                <button @click="abrirAviso(m)" class="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-elevated text-text-primary text-xs font-semibold transition-all">Avisar</button>
+                <button @click="abrirPago(m)" class="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all active:scale-95">Pagar</button>
               </div>
             </div>
           </div>
@@ -135,22 +135,24 @@
       </div>
 
       <!-- Sección: Al Día (Verde) -->
-      <div v-if="gruposAgenda.alDia.length" class="space-y-2">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-success flex items-center space-x-1.5">
+      <div v-if="gruposAgenda.alDia.length" class="space-y-2.5">
+        <h3 class="text-xs font-black uppercase tracking-wider text-success flex items-center space-x-2">
           <span class="w-2.5 h-2.5 rounded-full bg-success"></span>
           <span>Al Día ({{ gruposAgenda.alDia.length }})</span>
         </h3>
         <div class="grid grid-cols-1 gap-2.5">
-          <div v-for="m in gruposAgenda.alDia" :key="m.id" class="card-mensualidad border-l-4 border-l-success">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div v-for="m in gruposAgenda.alDia" :key="m.id" class="card-craft p-4 border-l-4 border-l-success">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span class="font-bold text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
-                <span class="font-mono font-bold text-xs px-2 py-0.5 rounded bg-surface-elevated text-primary ml-2">
-                  {{ m.vehiculos?.placa }}
-                </span>
-                <p class="text-xs text-text-secondary mt-0.5">Vigente hasta: {{ m.fecha_fin }} (en {{ m.clasificacion.diasRestantes }} días)</p>
+                <div class="flex items-center space-x-2.5">
+                  <span class="font-black text-sm text-text-primary">{{ m.clientes?.nombre }}</span>
+                  <span class="plate-colombia plate-carro text-[10px]">
+                    {{ m.vehiculos?.placa }}
+                  </span>
+                </div>
+                <p class="text-xs text-text-secondary mt-1">Vigente hasta: {{ m.fecha_fin }} (en {{ m.clasificacion.diasRestantes }} días)</p>
               </div>
-              <span class="font-bold text-text-primary text-sm">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
+              <span class="font-mono font-black text-text-primary text-sm num-tabular">${{ (m.planes_mensuales?.valor || 0).toLocaleString() }}</span>
             </div>
           </div>
         </div>
@@ -158,40 +160,44 @@
     </div>
 
     <!-- VISTA 2: TODAS LAS MENSUALIDADES -->
-    <div v-if="pestañaActiva === 'todas'" class="bg-surface rounded-xl border border-border overflow-x-auto">
+    <div v-if="pestañaActiva === 'todas'" class="card-craft overflow-x-auto">
       <table class="w-full text-left text-xs">
-        <thead class="bg-surface-elevated text-text-secondary uppercase border-b border-border text-[10px]">
+        <thead class="bg-surface-elevated text-text-secondary uppercase border-b border-border text-[10px] tracking-wider font-bold">
           <tr>
-            <th class="px-3 py-2.5">Cliente</th>
-            <th class="px-3 py-2.5">Placa</th>
-            <th class="px-3 py-2.5">Plan</th>
-            <th class="px-3 py-2.5">Día Corte</th>
-            <th class="px-3 py-2.5">Vence</th>
-            <th class="px-3 py-2.5">Estado</th>
-            <th class="px-3 py-2.5 text-right">Acción</th>
+            <th class="px-3.5 py-2.5">Cliente</th>
+            <th class="px-3.5 py-2.5">Placa</th>
+            <th class="px-3.5 py-2.5">Plan</th>
+            <th class="px-3.5 py-2.5">Día Corte</th>
+            <th class="px-3.5 py-2.5">Vence</th>
+            <th class="px-3.5 py-2.5">Estado</th>
+            <th class="px-3.5 py-2.5 text-right">Acción</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border">
-          <tr v-for="m in mensualidades" :key="m.id" class="hover:bg-surface-elevated/40">
-            <td class="px-3 py-3 font-bold text-text-primary">{{ m.clientes?.nombre }}</td>
-            <td class="px-3 py-3 font-mono font-bold text-primary">{{ m.vehiculos?.placa }}</td>
-            <td class="px-3 py-3">{{ m.planes_mensuales?.nombre }}</td>
-            <td class="px-3 py-3">Día {{ m.dia_corte }}</td>
-            <td class="px-3 py-3 font-semibold">{{ m.fecha_fin }}</td>
-            <td class="px-3 py-3">
+          <tr v-for="m in mensualidades" :key="m.id" class="hover:bg-surface-elevated/40 transition-colors">
+            <td class="px-3.5 py-3 font-black text-text-primary">{{ m.clientes?.nombre }}</td>
+            <td class="px-3.5 py-3">
+              <span class="plate-colombia plate-carro text-[10px]">
+                {{ m.vehiculos?.placa }}
+              </span>
+            </td>
+            <td class="px-3.5 py-3 text-text-secondary font-medium">{{ m.planes_mensuales?.nombre }}</td>
+            <td class="px-3.5 py-3 font-mono font-semibold">Día {{ m.dia_corte }}</td>
+            <td class="px-3.5 py-3 font-mono font-semibold num-tabular">{{ m.fecha_fin }}</td>
+            <td class="px-3.5 py-3">
               <span 
-                class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase"
+                class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border"
                 :class="{
-                  'bg-danger-bg text-danger': m.clasificacion.color === 'rojo',
-                  'bg-warning-bg text-warning': m.clasificacion.color === 'amarillo',
-                  'bg-success-bg text-success': m.clasificacion.color === 'verde'
+                  'bg-danger/10 text-danger border-danger/20': m.clasificacion.color === 'rojo',
+                  'bg-warning/15 text-warning border-warning/25': m.clasificacion.color === 'amarillo',
+                  'bg-success/10 text-success border-success/20': m.clasificacion.color === 'verde'
                 }"
               >
                 {{ m.clasificacion.estado.replace('_', ' ') }}
               </span>
             </td>
-            <td class="px-3 py-3 text-right space-x-1">
-              <button @click="abrirPago(m)" class="btn-primary text-[10px] py-1 px-2">Pagar</button>
+            <td class="px-3.5 py-3 text-right space-x-1">
+              <button @click="abrirPago(m)" class="px-3 py-1 rounded-lg bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-sm transition-all active:scale-95">Pagar</button>
             </td>
           </tr>
         </tbody>
