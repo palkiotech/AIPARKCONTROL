@@ -148,6 +148,13 @@ export const ocupacionService = {
       if (error) throw error
       return data
     } catch (err) {
+      // Propagar si es un error de validación o del servidor (ej. sin turno, ya cerrado)
+      const esErrorRed = !navigator.onLine || err.message?.includes('fetch') || err.name === 'TypeError'
+      if (!esErrorRed && err.message) {
+        throw err
+      }
+
+      // Contingencia sin conexión
       await encolarOperacion('salida', {
         registroId,
         metodoPagoId,

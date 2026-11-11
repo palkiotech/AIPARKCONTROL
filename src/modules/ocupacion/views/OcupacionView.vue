@@ -112,7 +112,7 @@
                   >
                     {{ v.placa }}
                   </span>
-                  <span v-if="v.hora_origen === 'dispositivo'" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <span v-if="v.isOffline || v.estado === 'pendiente_sync'" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                     Offline
                   </span>
                 </div>
@@ -526,6 +526,7 @@ async function confirmarSalida() {
     const resSalida = await ocupacionService.registrarSalida({
       registroId: infoCobro.registro.id,
       metodoPagoId: infoCobro.metodoPagoId,
+      tarifaId: infoCobro.registro.tarifa_id || infoCobro.registro.tarifas?.id || null,
       valorCobrado: infoCobro.valorTotal
     })
 

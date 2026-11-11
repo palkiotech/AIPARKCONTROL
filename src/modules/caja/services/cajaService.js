@@ -40,7 +40,34 @@ export const cajaService = {
         .maybeSingle()
 
       if (error) throw error
-      const resultado = data || turnoLocalActivo
+      
+      if (data) {
+        cacheTurno = data
+        return data
+      }
+
+      // Si no existe turno abierto en Supabase, auto-abrimos el turno de prueba ($50.000)
+      // para que PostgreSQL tenga un turno_id real en turnos_caja y permita registrar salidas y cobros (HU-24)
+      try {
+        const { data: resRpc, error: errRpc } = await supabase.rpc('abrir_turno', {
+          p_base_inicial: 50000
+        })
+        if (!errRpc && resRpc?.turno_id) {
+          const { data: turnoCreado } = await supabase
+            .from('turnos_caja')
+            .select('*, profiles!usuario_id(nombre)')
+            .eq('id', resRpc.turno_id)
+            .maybeSingle()
+          if (turnoCreado) {
+            cacheTurno = turnoCreado
+            return turnoCreado
+          }
+        }
+      } catch (eAuto) {
+        console.warn('Auto-apertura de turno en Supabase no disponible:', eAuto)
+      }
+
+      const resultado = turnoLocalActivo
       cacheTurno = resultado
       return resultado
     } catch (err) {
