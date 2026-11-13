@@ -1,497 +1,1003 @@
 <template>
   <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-      <div>
-        <h2 class="text-xl md:text-2xl font-bold">Ajustes del Parqueadero</h2>
-        <p class="text-sm text-text-secondary">Configuración de datos, tipos de vehículo, tarifas y cobros.</p>
-      </div>
-
-      <div v-if="mensajeExito" class="px-3 py-1.5 rounded-lg bg-success-bg text-success text-xs font-semibold border border-success/20">
-        {{ mensajeExito }}
-      </div>
-      <div v-if="errorMensaje" class="px-3 py-1.5 rounded-lg bg-danger-bg text-danger text-xs font-semibold border border-danger/20">
-        {{ errorMensaje }}
-      </div>
+    <div>
+      <h2 class="titulo-pagina">Ajustes del parqueadero</h2>
+      <p class="subtitulo-pagina">Datos del negocio, tipos de vehículo, tarifas, planes, métodos de pago, ticket y tema.</p>
     </div>
 
-    <!-- Pestañas de Ajustes -->
-    <div class="flex border-b border-border overflow-x-auto space-x-2 pb-px text-sm">
-      <button 
-        v-for="tab in tabs" 
+    <div v-if="!conexion.isOnline" class="alerta-aviso">
+      Sin conexión: Ajustes requiere internet. Puedes consultar los datos, pero no guardar cambios.
+    </div>
+    <div v-if="mensajeExito" class="alerta-exito">{{ mensajeExito }}</div>
+    <div v-if="errorMensaje" class="alerta-error" role="alert">{{ errorMensaje }}</div>
+
+    <!-- Pestañas -->
+    <div class="flex border-b border-border overflow-x-auto gap-1 text-sm" role="tablist">
+      <button
+        v-for="tab in tabs"
         :key="tab.id"
-        @click="tabActiva = tab.id"
-        class="px-4 py-2 font-medium border-b-2 whitespace-nowrap transition-colors"
-        :class="tabActiva === tab.id ? 'border-primary text-primary font-bold' : 'border-transparent text-text-secondary hover:text-text-primary'"
+        role="tab"
+        :aria-selected="tabActiva === tab.id"
+        @click="cambiarTab(tab.id)"
+        class="px-3 md:px-4 py-2.5 -mb-px text-sm font-medium border-b-2 whitespace-nowrap transition-colors"
+        :class="tabActiva === tab.id ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'"
       >
         {{ tab.label }}
       </button>
     </div>
 
-    <!-- 1. PESTAÑA NEGOCIO & TICKET (HU-06, HU-27) -->
-    <div v-if="tabActiva === 'negocio'" class="bg-surface rounded-xl border border-border p-5 space-y-4 max-w-2xl">
-      <h3 class="font-bold text-base">Datos Generales</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Nombre del Parqueadero *</label>
-          <input v-model="negocioForm.nombre" type="text" class="input-field" />
+    <!-- 1. NEGOCIO (HU-06) -->
+    <form v-if="tabActiva === 'negocio'" @submit.prevent="guardarNegocio" class="card-craft p-5 space-y-4 max-w-3xl">
+      <fieldset :disabled="!conexion.isOnline || guardando" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="etiqueta">Nombre del parqueadero *</label>
+            <input v-model.trim="negocio.nombre" class="campo" :class="{ 'border-danger': erroresNegocio.nombre }" />
+            <p v-if="erroresNegocio.nombre" class="err">{{ erroresNegocio.nombre }}</p>
+          </div>
+          <div>
+            <label class="etiqueta">NIT *</label>
+            <input v-model.trim="negocio.nit" class="campo" :class="{ 'border-danger': erroresNegocio.nit }" />
+            <p v-if="erroresNegocio.nit" class="err">{{ erroresNegocio.nit }}</p>
+          </div>
+          <div>
+            <label class="etiqueta">Dirección</label>
+            <input v-model.trim="negocio.direccion" class="campo" />
+          </div>
+          <div>
+            <label class="etiqueta">Teléfono</label>
+            <input v-model.trim="negocio.telefono" class="campo" />
+          </div>
+          <div>
+            <label class="etiqueta">Zona horaria</label>
+            <select v-model="negocio.zona_horaria" class="campo">
+              <option v-for="z in ZONAS" :key="z.id" :value="z.id">{{ z.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="etiqueta">Moneda</label>
+            <select v-model="negocio.moneda" class="campo">
+              <option value="COP">COP · Peso colombiano</option>
+              <option value="USD">USD · Dólar</option>
+              <option value="PEN">PEN · Sol peruano</option>
+              <option value="MXN">MXN · Peso mexicano</option>
+            </select>
+          </div>
+          <div>
+            <label class="etiqueta">Días de aviso de vencimiento</label>
+            <input v-model.number="negocio.dias_aviso_vencimiento" type="number" min="0" max="60" class="campo" :class="{ 'border-danger': erroresNegocio.dias }" />
+            <p v-if="erroresNegocio.dias" class="err">{{ erroresNegocio.dias }}</p>
+            <p v-else class="hint">Una mensualidad pasa a "Por vencer" esta cantidad de días antes de su fecha de cobro.</p>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="etiqueta">Texto del pie del comprobante</label>
+            <textarea v-model="negocio.texto_pie_comprobante" rows="2" class="campo" placeholder="Gracias por su visita..."></textarea>
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">NIT *</label>
-          <input v-model="negocioForm.nit" type="text" class="input-field" />
+
+        <div class="pt-3 border-t border-border">
+          <label class="etiqueta">Logo (PNG o JPG, máximo 1 MB)</label>
+          <div class="flex items-center gap-4 flex-wrap">
+            <div class="w-20 h-20 rounded-lg border border-border bg-surface-elevated flex items-center justify-center overflow-hidden">
+              <img v-if="logoPreview || negocio.logo_url" :src="logoPreview || negocio.logo_url" alt="Logo del parqueadero" class="max-w-full max-h-full object-contain" />
+              <span v-else class="text-2xs text-text-muted">Sin logo</span>
+            </div>
+            <div class="space-y-1">
+              <input type="file" accept="image/png,image/jpeg" @change="seleccionarLogo" class="text-xs text-text-secondary file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-solid file:border-border file:bg-surface file:text-text-primary file:text-xs file:font-semibold hover:file:bg-surface-elevated" />
+              <p v-if="errorLogo" class="err">{{ errorLogo }}</p>
+              <button v-if="archivoLogo" type="button" @click="subirLogo" :disabled="subiendoLogo" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">
+                {{ subiendoLogo ? 'Subiendo...' : 'Subir logo' }}
+              </button>
+            </div>
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Dirección</label>
-          <input v-model="negocioForm.direccion" type="text" class="input-field" />
+
+        <div class="pt-2">
+          <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">{{ guardando ? 'Guardando...' : 'Guardar datos del negocio' }}</button>
         </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Teléfono</label>
-          <input v-model="negocioForm.telefono" type="text" class="input-field" />
+      </fieldset>
+    </form>
+
+    <!-- 2. TIPOS DE VEHÍCULO (HU-07) -->
+    <div v-if="tabActiva === 'tipos'" class="space-y-4">
+      <div class="flex justify-between items-center">
+        <p class="text-xs text-text-muted">La capacidad informa, no bloquea las entradas.</p>
+        <button @click="editarTipo(null)" :disabled="!conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2 rounded-lg"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo tipo</button>
+      </div>
+      <div class="card-craft divide-y divide-border">
+        <div v-if="!tipos.length" class="vacio">No hay tipos de vehículo.</div>
+        <div v-for="t in tipos" :key="t.id" class="p-4 flex items-center justify-between gap-3">
+          <div>
+            <p class="font-semibold text-sm flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0"><IconoVehiculo :nombre="ICONOS_TIPO[t.icono] || t.nombre" clase="w-4 h-4" /></span>{{ t.nombre }}
+              <span v-if="!t.activo" class="badge-pastel-rose text-2xs px-2 py-0.5 rounded-full ml-1">Inactivo</span>
+            </p>
+            <p class="text-xs text-text-muted pl-10">Capacidad {{ t.capacidad }} · orden {{ t.orden }}</p>
+          </div>
+          <div class="flex gap-2">
+            <button @click="editarTipo(t)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Editar</button>
+            <button @click="alternarTipo(t)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :class="t.activo ? 'text-danger' : 'text-success'">
+              {{ t.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. TARIFAS (HU-08) -->
+    <div v-if="tabActiva === 'tarifas'" class="space-y-4">
+      <div class="flex flex-col sm:flex-row justify-between gap-3">
+        <select v-model="filtroTipoTarifa" class="campo campo-sm sm:max-w-xs">
+          <option value="">Todos los tipos</option>
+          <option v-for="t in tipos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
+        </select>
+        <button @click="editarTarifa(null)" :disabled="!conexion.isOnline || !tiposActivos.length" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">+ Nueva tarifa</button>
+      </div>
+
+      <div class="card-craft divide-y divide-border">
+        <div v-if="!tarifasFiltradas.length" class="vacio">No hay tarifas para este filtro.</div>
+        <div v-for="t in tarifasFiltradas" :key="t.id" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p class="font-semibold text-sm">{{ t.nombre }}
+              <span class="text-xs font-normal text-text-muted">· {{ t.tipos_vehiculo?.nombre }}</span>
+            </p>
+            <p class="text-xs text-text-secondary">{{ describirTarifa(t) }}</p>
+            <div class="flex gap-1 mt-1 flex-wrap">
+              <span v-if="t.es_predeterminada" class="badge-pastel-blue text-2xs px-2 py-0.5 rounded-full">Predeterminada</span>
+              <span v-if="t.franja_inicio" class="badge-pastel-amber text-2xs px-2 py-0.5 rounded-full">Nocturna {{ hhmm(t.franja_inicio) }}–{{ hhmm(t.franja_fin) }}</span>
+              <span v-if="!t.activa" class="badge-pastel-rose text-2xs px-2 py-0.5 rounded-full">Inactiva</span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button @click="editarTarifa(t)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Editar</button>
+            <button @click="alternarTarifa(t)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :class="t.activa ? 'text-danger' : 'text-success'">
+              {{ t.activa ? 'Desactivar' : 'Activar' }}
+            </button>
+          </div>
         </div>
       </div>
 
-      <h3 class="font-bold text-base pt-2 border-t border-border">Ticket y Operación</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Modo de Ticket (HU-27)</label>
-          <select v-model="negocioForm.modo_ticket" class="input-field">
-            <option value="qr">QR en Pantalla (Recomendado sin impresora)</option>
-            <option value="termica">Impresora Térmica</option>
-            <option value="ninguno">Sin Ticket</option>
-          </select>
+      <!-- Simulador de cobro -->
+      <div class="card-craft p-5 space-y-3">
+        <h3 class="titulo-seccion">Simulador de cobro</h3>
+        <p class="text-xs text-text-muted">Usa el mismo cálculo que la salida. Horas en {{ authStore.zonaHoraria }}. Si el tipo tiene tarifa nocturna activa, se aplica en su franja.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="etiqueta">Tipo</label>
+            <select v-model="sim.tipoId" class="campo campo-sm">
+              <option v-for="t in tiposActivos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="etiqueta">Tarifa general</label>
+            <select v-model="sim.tarifaId" class="campo campo-sm">
+              <option v-for="t in tarifasGeneralesSim" :key="t.id" :value="t.id">{{ t.nombre }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="etiqueta">Entrada</label>
+            <input v-model="sim.entrada" type="datetime-local" class="campo campo-sm" />
+          </div>
+          <div>
+            <label class="etiqueta">Salida</label>
+            <input v-model="sim.salida" type="datetime-local" class="campo campo-sm" />
+          </div>
         </div>
-        <div v-if="negocioForm.modo_ticket === 'termica'">
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Ancho de papel</label>
-          <select v-model="negocioForm.ancho_ticket_mm" class="input-field">
-            <option :value="80">80 mm</option>
-            <option :value="58">58 mm</option>
-          </select>
+        <button @click="simularCobro" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">Calcular</button>
+        <p v-if="sim.error" class="err">{{ sim.error }}</p>
+        <div v-if="sim.resultado" class="rounded-lg bg-surface-elevated border border-border p-3 text-xs space-y-1">
+          <p class="text-base font-bold num-tabular">{{ pesos(sim.resultado.valorTotal) }} <span class="text-xs font-normal text-text-muted">· {{ duracion(sim.resultado.minutosTotal) }}</span></p>
+          <p v-for="(d, i) in sim.resultado.desglose" :key="i" class="text-text-secondary">
+            Tramo {{ d.tipo === 'nocturna' ? 'nocturno' : 'general' }}: {{ duracion(d.minutos) }} → <span class="num-tabular font-semibold">{{ pesos(d.valor) }}</span>
+          </p>
         </div>
-        <div class="sm:col-span-2">
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Pie de comprobante / ticket</label>
-          <textarea v-model="negocioForm.texto_pie_comprobante" rows="2" class="input-field" placeholder="Gracias por su visita. No nos hacemos responsables por objetos de valor..."></textarea>
+      </div>
+    </div>
+
+    <!-- 4. PLANES MENSUALES (HU-09) -->
+    <div v-if="tabActiva === 'planes'" class="space-y-4">
+      <div class="flex justify-end">
+        <button @click="editarPlan(null)" :disabled="!conexion.isOnline || !tiposActivos.length" class="btn-craft-primary text-sm px-4 py-2 rounded-lg"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo plan</button>
+      </div>
+      <div class="card-craft divide-y divide-border">
+        <div v-if="!planes.length" class="vacio">No hay planes mensuales.</div>
+        <div v-for="p in planes" :key="p.id" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p class="font-semibold text-sm">{{ p.nombre }} <span class="text-xs font-normal text-text-muted">· {{ p.tipos_vehiculo?.nombre }}</span>
+              <span v-if="!p.activo" class="badge-pastel-rose text-2xs px-2 py-0.5 rounded-full ml-1">Inactivo</span>
+            </p>
+            <p class="text-xs text-text-secondary">
+              {{ pesos(p.valor) }} · {{ p.tipo_periodo === 'mensual' ? 'Mensual (mismo día de cada mes)' : `Cada ${p.duracion_dias} días` }} · {{ p.dias_gracia_pago }} día(s) de gracia
+            </p>
+          </div>
+          <div class="flex gap-2">
+            <button @click="editarPlan(p)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Editar</button>
+            <button @click="alternarPlan(p)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :class="p.activo ? 'text-danger' : 'text-success'">
+              {{ p.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="pt-2">
-        <button @click="guardarNegocio" :disabled="guardando" class="btn-primary">
-          {{ guardando ? 'Guardando...' : 'Guardar Datos del Negocio' }}
+      <div class="card-craft p-5 space-y-3 max-w-2xl">
+        <h3 class="titulo-seccion">Simulador de periodos</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div>
+            <label class="etiqueta">Plan</label>
+            <select v-model="simPlan.planId" class="campo campo-sm">
+              <option v-for="p in planes" :key="p.id" :value="p.id">{{ p.nombre }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="etiqueta">Fecha de inicio</label>
+            <input v-model="simPlan.fechaInicio" type="date" class="campo campo-sm" />
+          </div>
+          <button @click="simularPeriodos" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">Ver próximos 3 periodos</button>
+        </div>
+        <p v-if="simPlan.error" class="err">{{ simPlan.error }}</p>
+        <ul v-if="simPlan.periodos.length" class="text-xs space-y-1">
+          <li v-for="(per, i) in simPlan.periodos" :key="i" class="flex justify-between bg-surface-elevated border border-border rounded-lg px-3 py-2">
+            <span>Periodo {{ i + 1 }}</span>
+            <span class="font-semibold">{{ formatearFechaCorta(per.desde) }} → {{ formatearFechaCorta(per.hasta) }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 5. MÉTODOS DE PAGO (HU-06) -->
+    <div v-if="tabActiva === 'pagos'" class="space-y-4">
+      <div class="flex justify-between items-center gap-2">
+        <p class="text-xs text-text-muted">Los métodos marcados como efectivo suman al efectivo esperado del turno. Debe haber al menos uno activo.</p>
+        <button @click="editarMetodo(null)" :disabled="!conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2 rounded-lg"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo método</button>
+      </div>
+      <div class="card-craft divide-y divide-border">
+        <div v-if="!metodos.length" class="vacio">No hay métodos de pago.</div>
+        <div v-for="(m, i) in metodos" :key="m.id" class="p-4 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <div class="flex flex-col">
+              <button @click="moverMetodo(i, -1)" :disabled="i === 0 || !conexion.isOnline || ocupado" class="text-text-muted hover:text-primary disabled:opacity-30 leading-none" aria-label="Subir"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg></button>
+              <button @click="moverMetodo(i, 1)" :disabled="i === metodos.length - 1 || !conexion.isOnline || ocupado" class="text-text-muted hover:text-primary disabled:opacity-30 leading-none" aria-label="Bajar"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg></button>
+            </div>
+            <div>
+              <p class="font-semibold text-sm">{{ m.nombre }}</p>
+              <div class="flex gap-1 mt-0.5">
+                <span v-if="m.es_efectivo" class="badge-pastel-mint text-2xs px-2 py-0.5 rounded-full">Efectivo</span>
+                <span v-if="!m.activo" class="badge-pastel-rose text-2xs px-2 py-0.5 rounded-full">Inactivo</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button @click="editarMetodo(m)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Editar</button>
+            <button @click="alternarMetodo(m)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :class="m.activo ? 'text-danger' : 'text-success'">
+              {{ m.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. TICKET (HU-27) -->
+    <div v-if="tabActiva === 'ticket'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <form @submit.prevent="guardarNegocio" class="card-craft p-5 space-y-4">
+        <fieldset :disabled="!conexion.isOnline || guardando" class="space-y-4">
+          <div>
+            <label class="etiqueta">Modo de ticket de entrada</label>
+            <div class="grid grid-cols-1 gap-2">
+              <label v-for="m in MODOS_TICKET" :key="m.id" class="flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition-colors" :class="negocio.modo_ticket === m.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'">
+                <input type="radio" :value="m.id" v-model="negocio.modo_ticket" class="mt-0.5" />
+                <span>
+                  <span class="block text-sm font-semibold">{{ m.label }}</span>
+                  <span class="block text-xs text-text-muted">{{ m.ayuda }}</span>
+                </span>
+              </label>
+            </div>
+          </div>
+          <div v-if="negocio.modo_ticket === 'termica'">
+            <label class="etiqueta">Ancho del papel</label>
+            <select v-model.number="negocio.ancho_ticket_mm" class="campo">
+              <option :value="80">80 mm</option>
+              <option :value="58">58 mm</option>
+            </select>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">{{ guardando ? 'Guardando...' : 'Guardar ticket' }}</button>
+            <button v-if="negocio.modo_ticket === 'termica'" type="button" @click="imprimirPrueba" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Imprimir prueba</button>
+          </div>
+        </fieldset>
+      </form>
+
+      <div class="card-craft p-5">
+        <p class="etiqueta mb-3">Vista previa</p>
+        <div v-if="negocio.modo_ticket === 'ninguno'" class="vacio">
+          Sin ticket: la salida se hace consultando la placa.
+        </div>
+        <div v-else class="mx-auto bg-white text-black font-mono text-2xs p-3 shadow-sm border border-black/10 rounded-sm space-y-1"
+          :style="{ width: negocio.modo_ticket === 'termica' && negocio.ancho_ticket_mm === 58 ? '200px' : '270px' }">
+          <p class="text-center font-bold text-xs">{{ negocio.nombre || 'Parqueadero' }}</p>
+          <p class="text-center">NIT {{ negocio.nit || '—' }}</p>
+          <hr class="border-dashed border-black/40" />
+          <p class="text-center text-base font-bold tracking-widest">ABC123</p>
+          <p>Tipo: {{ tiposActivos[0]?.nombre || 'Carro' }}</p>
+          <p>Entrada: {{ ahoraTexto }}</p>
+          <p>Tarifa: {{ tarifaEjemplo }}</p>
+          <img v-if="qrPrueba" :src="qrPrueba" alt="QR de prueba" class="mx-auto w-24 h-24" />
+          <p v-if="negocio.texto_pie_comprobante" class="text-center text-2xs">{{ negocio.texto_pie_comprobante }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. TEMA (HU-10) -->
+    <div v-if="tabActiva === 'tema'" class="card-craft p-5 max-w-md space-y-3">
+      <p class="etiqueta">Tema de la aplicación (se guarda en este dispositivo)</p>
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          v-for="t in TEMAS"
+          :key="t.id"
+          @click="temaStore.setTheme(t.id)"
+          class="px-3 py-3 rounded-lg border text-sm font-medium transition-colors"
+          :class="temaStore.currentTheme === t.id ? 'border-primary text-primary bg-primary/10' : 'border-border text-text-secondary hover:border-primary/50'"
+        >
+          {{ t.label }}
         </button>
       </div>
     </div>
 
-    <!-- 2. PESTAÑA TIPOS DE VEHÍCULO (HU-07) -->
-    <div v-if="tabActiva === 'vehiculos'" class="space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="font-bold text-base">Tipos de Vehículo y Capacidad</h3>
-        <button @click="abrirModalTipo(null)" class="btn-primary text-xs">+ Agregar Tipo</button>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div v-for="tipo in tiposVehiculo" :key="tipo.id" class="bg-surface p-4 rounded-xl border border-border space-y-2">
-          <div class="flex justify-between items-start">
-            <span class="font-bold text-lg text-text-primary">{{ tipo.nombre }}</span>
-            <span class="text-xs px-2 py-0.5 rounded-full" :class="tipo.activo ? 'bg-success-bg text-success' : 'bg-surface-elevated text-text-muted'">
-              {{ tipo.activo ? 'Activo' : 'Inactivo' }}
-            </span>
-          </div>
-          <p class="text-xs text-text-secondary">Capacidad: <strong class="text-text-primary">{{ tipo.capacidad }} cupos</strong></p>
-          <div class="pt-2 flex justify-end space-x-2">
-            <button @click="abrirModalTipo(tipo)" class="btn-secondary text-xs">Editar</button>
-          </div>
+    <!-- EDITOR (modal) -->
+    <div v-if="editor" class="modal-fondo" @click.self="cerrarEditor">
+      <form @submit.prevent="guardarEditor" class="modal-panel max-w-lg">
+        <div class="modal-encabezado">
+          <h3 class="modal-titulo">{{ tituloEditor }}</h3>
+          <button type="button" class="btn-icono" aria-label="Cerrar" @click="cerrarEditor"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
-      </div>
-    </div>
 
-    <!-- 3. PESTAÑA TARIFAS Y SIMULADOR (HU-08) -->
-    <div v-if="tabActiva === 'tarifas'" class="space-y-6">
-      <div class="flex justify-between items-center">
-        <div>
-          <h3 class="font-bold text-base">Tarifas por Tipo de Vehículo</h3>
-          <p class="text-xs text-text-muted">Configura tarifas por hora, minuto, fracción, plena y franja nocturna.</p>
-        </div>
-        <button @click="abrirModalTarifa(null)" class="btn-primary text-xs">+ Nueva Tarifa</button>
-      </div>
-
-      <!-- Tabla de tarifas -->
-      <div class="bg-surface rounded-xl border border-border overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead class="bg-surface-elevated text-xs text-text-secondary uppercase border-b border-border">
-            <tr>
-              <th class="px-4 py-3">Tipo</th>
-              <th class="px-4 py-3">Nombre</th>
-              <th class="px-4 py-3">Modalidad</th>
-              <th class="px-4 py-3">Valor</th>
-              <th class="px-4 py-3">Franja Nocturna</th>
-              <th class="px-4 py-3">Predeterminada</th>
-              <th class="px-4 py-3 text-right">Acción</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-border">
-            <tr v-for="t in tarifas" :key="t.id" class="hover:bg-surface-elevated/40">
-              <td class="px-4 py-3 font-semibold">{{ t.tipos_vehiculo?.nombre || '—' }}</td>
-              <td class="px-4 py-3">{{ t.nombre }}</td>
-              <td class="px-4 py-3 text-xs uppercase">{{ t.modalidad.replace('_', ' ') }}</td>
-              <td class="px-4 py-3 font-bold">${{ t.valor.toLocaleString() }}</td>
-              <td class="px-4 py-3 text-xs">
-                <span v-if="t.franja_inicio && t.franja_fin" class="text-warning font-semibold">
-                  {{ t.franja_inicio }} a {{ t.franja_fin }}
-                </span>
-                <span v-else class="text-text-muted">No</span>
-              </td>
-              <td class="px-4 py-3 text-xs">
-                <span v-if="t.es_predeterminada" class="px-2 py-0.5 bg-primary/10 text-primary font-bold rounded-full">Sí</span>
-                <span v-else class="text-text-muted">No</span>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <button @click="abrirModalTarifa(t)" class="btn-secondary text-xs">Editar</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- SIMULADOR EN VIVO DE COBRO (HU-08) -->
-      <div class="bg-surface rounded-xl border border-primary/30 p-5 space-y-4">
-        <div class="flex items-center space-x-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
-          <h4 class="font-bold text-sm text-primary uppercase tracking-wider">Simulador de Cobro en Vivo</h4>
-        </div>
-        <p class="text-xs text-text-secondary">Prueba cómo se calcula una estancia con las tarifas actuales antes de aplicarla.</p>
-
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <!-- Tipo de vehículo -->
+        <template v-if="editor.clase === 'tipo'">
           <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Fecha/Hora Entrada</label>
-            <input v-model="simuladorTarifa.entrada" type="datetime-local" class="input-field text-xs" />
+            <label class="etiqueta">Nombre *</label>
+            <input v-model.trim="editor.datos.nombre" required class="campo" placeholder="Carro, Moto, Camioneta..." />
           </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Fecha/Hora Salida</label>
-            <input v-model="simuladorTarifa.salida" type="datetime-local" class="input-field text-xs" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Tarifa General</label>
-            <select v-model="simuladorTarifa.tarifaGeneralId" class="input-field text-xs">
-              <option v-for="t in tarifas" :key="t.id" :value="t.id">{{ t.tipos_vehiculo?.nombre }} - {{ t.nombre }} (${{ t.valor }})</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Tarifa Nocturna (Opcional)</label>
-            <select v-model="simuladorTarifa.tarifaNocturnaId" class="input-field text-xs">
-              <option :value="null">Ninguna</option>
-              <option v-for="t in tarifas.filter(x => x.franja_inicio)" :key="t.id" :value="t.id">{{ t.nombre }} ({{ t.franja_inicio }}-{{ t.franja_fin }})</option>
-            </select>
-          </div>
-        </div>
-
-        <button @click="ejecutarSimulacionCobro" class="btn-primary text-xs">Calcular Simulación</button>
-
-        <!-- Resultado del simulador -->
-        <div v-if="resultadoSimulacionCobro" class="p-4 rounded-lg bg-surface-elevated border border-border text-xs space-y-2">
-          <div class="flex justify-between items-center text-sm font-bold">
-            <span>Total Cobro Calculado:</span>
-            <span class="text-primary text-base">${{ resultadoSimulacionCobro.valorTotal.toLocaleString() }} ({{ resultadoSimulacionCobro.minutosTotal }} min)</span>
-          </div>
-          <div v-if="resultadoSimulacionCobro.desglose?.length" class="space-y-1 pt-2 border-t border-border">
-            <span class="font-semibold text-text-muted uppercase text-[10px]">Desglose de tramos:</span>
-            <div v-for="(tr, idx) in resultadoSimulacionCobro.desglose" :key="idx" class="flex justify-between text-text-secondary">
-              <span>Tramo {{ idx + 1 }} ({{ tr.tipo === 'nocturna' ? 'Nocturno' : 'General' }}): {{ tr.minutos }} min</span>
-              <span class="font-bold text-text-primary">${{ tr.valor.toLocaleString() }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. PESTAÑA PLANES MENSUALES Y SIMULADOR (HU-09) -->
-    <div v-if="tabActiva === 'planes'" class="space-y-6">
-      <div class="flex justify-between items-center">
-        <div>
-          <h3 class="font-bold text-base">Planes de Mensualidad</h3>
-          <p class="text-xs text-text-muted">Planes mensuales con fecha de corte dinámica o días fijos (quincenas, semanas).</p>
-        </div>
-        <button @click="abrirModalPlan(null)" class="btn-primary text-xs">+ Nuevo Plan</button>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div v-for="plan in planesMensuales" :key="plan.id" class="bg-surface p-4 rounded-xl border border-border space-y-2">
-          <div class="flex justify-between items-start">
+          <div class="grid grid-cols-3 gap-3">
             <div>
-              <span class="text-xs font-semibold text-text-muted uppercase">{{ plan.tipos_vehiculo?.nombre }}</span>
-              <h4 class="font-bold text-base text-text-primary">{{ plan.nombre }}</h4>
+              <label class="etiqueta">Ícono</label>
+              <select v-model="editor.datos.icono" class="campo">
+                <option v-for="(nombreIcono, clave) in ICONOS_TIPO" :key="clave" :value="clave">{{ nombreIcono }}</option>
+              </select>
             </div>
-            <span class="font-bold text-primary text-lg">${{ plan.valor.toLocaleString() }}</span>
+            <div>
+              <label class="etiqueta">Capacidad</label>
+              <input v-model.number="editor.datos.capacidad" type="number" min="0" required class="campo" />
+            </div>
+            <div>
+              <label class="etiqueta">Orden</label>
+              <input v-model.number="editor.datos.orden" type="number" min="0" class="campo" />
+            </div>
           </div>
-          <p class="text-xs text-text-secondary">
-            Tipo: <strong>{{ plan.tipo_periodo === 'mensual' ? 'Mensual (Día a día)' : `${plan.duracion_dias} días fijos` }}</strong>
+        </template>
+
+        <!-- Tarifa -->
+        <template v-if="editor.clase === 'tarifa'">
+          <p v-if="editor.vehiculosDentro > 0" class="alerta-aviso">
+            Hay {{ editor.vehiculosDentro }} vehículo(s) dentro con esta tarifa: se cobrarán con el valor vigente al salir.
           </p>
-          <p class="text-xs text-text-secondary">Gracia de pago: {{ plan.dias_gracia_pago }} días</p>
-          <div class="pt-2 flex justify-end">
-            <button @click="abrirModalPlan(plan)" class="btn-secondary text-xs">Editar</button>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="etiqueta">Tipo de vehículo *</label>
+              <select v-model="editor.datos.tipo_vehiculo_id" required class="campo">
+                <option v-for="t in tiposActivos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="etiqueta">Nombre *</label>
+              <input v-model.trim="editor.datos.nombre" required class="campo" placeholder="Por hora, Día pleno..." />
+            </div>
+            <div>
+              <label class="etiqueta">Modalidad *</label>
+              <select v-model="editor.datos.modalidad" class="campo">
+                <option value="por_hora">Por hora</option>
+                <option value="por_minuto">Por minuto</option>
+                <option value="por_fraccion">Por fracción</option>
+                <option value="plena">Tarifa plena (por 24 h)</option>
+              </select>
+            </div>
+            <div>
+              <label class="etiqueta">Valor ($) *</label>
+              <input v-model.number="editor.datos.valor" type="number" min="1" step="1" required class="campo" />
+            </div>
+            <div v-if="editor.datos.modalidad === 'por_fraccion'">
+              <label class="etiqueta">Minutos por fracción</label>
+              <input v-model.number="editor.datos.minutos_fraccion" type="number" min="1" max="1440" class="campo" />
+            </div>
+            <template v-if="editor.datos.modalidad !== 'plena'">
+              <div>
+                <label class="etiqueta">Minutos de gracia</label>
+                <input v-model.number="editor.datos.minutos_gracia" type="number" min="0" class="campo" />
+              </div>
+              <div>
+                <label class="etiqueta">Tope por 24 h ($, opcional)</label>
+                <input v-model.number="editor.datos.tope_por_24h" type="number" min="1" class="campo" placeholder="Sin tope" />
+              </div>
+            </template>
           </div>
-        </div>
-      </div>
+          <label class="flex items-center gap-2 text-sm pt-1">
+            <input type="checkbox" class="rounded" v-model="editor.datos.conFranja" />
+            Aplicar solo en una franja horaria (tarifa nocturna)
+          </label>
+          <div v-if="editor.datos.conFranja" class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="etiqueta">Desde</label>
+              <input v-model="editor.datos.franja_inicio" type="time" required class="campo" />
+            </div>
+            <div>
+              <label class="etiqueta">Hasta</label>
+              <input v-model="editor.datos.franja_fin" type="time" required class="campo" />
+            </div>
+            <p class="hint col-span-2">Solo puede haber una tarifa con franja activa por tipo. El resto del tiempo se cobra con la tarifa general.</p>
+          </div>
+          <label class="flex items-center gap-2 text-sm" :class="{ 'opacity-50': editor.datos.conFranja }">
+            <input type="checkbox" class="rounded" v-model="editor.datos.es_predeterminada" :disabled="editor.datos.conFranja" />
+            Tarifa predeterminada del tipo (la anterior deja de serlo)
+          </label>
+        </template>
 
-      <!-- SIMULADOR EN VIVO DE PERIODOS (HU-09) -->
-      <div class="bg-surface rounded-xl border border-primary/30 p-5 space-y-4">
-        <div class="flex items-center space-x-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-primary"></span>
-          <h4 class="font-bold text-sm text-primary uppercase tracking-wider">Simulador de Periodos y Vencimientos</h4>
-        </div>
-        <p class="text-xs text-text-secondary">Verifica cómo se calculan los próximos 3 periodos para un cliente que ingrese en una fecha dada.</p>
+        <!-- Plan mensual -->
+        <template v-if="editor.clase === 'plan'">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="etiqueta">Tipo de vehículo *</label>
+              <select v-model="editor.datos.tipo_vehiculo_id" required class="campo">
+                <option v-for="t in tiposActivos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="etiqueta">Nombre *</label>
+              <input v-model.trim="editor.datos.nombre" required class="campo" placeholder="Mensual carro" />
+            </div>
+            <div>
+              <label class="etiqueta">Valor ($) *</label>
+              <input v-model.number="editor.datos.valor" type="number" min="1" required class="campo" />
+            </div>
+            <div>
+              <label class="etiqueta">Tipo de periodo</label>
+              <select v-model="editor.datos.tipo_periodo" class="campo">
+                <option value="mensual">Mensual (mismo día cada mes)</option>
+                <option value="dias_fijos">Días fijos</option>
+              </select>
+            </div>
+            <div v-if="editor.datos.tipo_periodo === 'dias_fijos'">
+              <label class="etiqueta">Duración (días)</label>
+              <input v-model.number="editor.datos.duracion_dias" type="number" min="1" required class="campo" />
+            </div>
+            <div>
+              <label class="etiqueta">Días de gracia para el pago</label>
+              <input v-model.number="editor.datos.dias_gracia_pago" type="number" min="0" class="campo" />
+            </div>
+          </div>
+          <p class="hint">Los cambios de valor o periodo aplican desde el siguiente pago; no alteran pagos registrados.</p>
+        </template>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- Método de pago -->
+        <template v-if="editor.clase === 'metodo'">
           <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Plan Seleccionado</label>
-            <select v-model="simuladorPeriodo.planId" class="input-field text-xs">
-              <option v-for="p in planesMensuales" :key="p.id" :value="p.id">{{ p.nombre }} ({{ p.tipo_periodo }})</option>
-            </select>
+            <label class="etiqueta">Nombre *</label>
+            <input v-model.trim="editor.datos.nombre" required class="campo" placeholder="Nequi, Daviplata, Tarjeta..." />
           </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Fecha de Inicio del Cliente</label>
-            <input v-model="simuladorPeriodo.fechaInicio" type="date" class="input-field text-xs" />
-          </div>
-          <div class="flex items-end">
-            <button @click="ejecutarSimulacionPeriodos" class="btn-primary text-xs w-full">Calcular Próximos Periodos</button>
-          </div>
-        </div>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" class="rounded" v-model="editor.datos.es_efectivo" />
+            Es efectivo (suma al efectivo esperado del turno)
+          </label>
+        </template>
 
-        <div v-if="resultadoSimulacionPeriodos?.length" class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          <div v-for="(p, i) in resultadoSimulacionPeriodos" :key="i" class="p-3 bg-surface-elevated border border-border rounded-lg text-xs space-y-1">
-            <span class="font-bold text-primary">Periodo {{ i + 1 }}</span>
-            <p class="text-text-primary font-semibold">{{ p.desde }} al {{ p.hasta }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+        <label v-if="editor.datos.id" class="flex items-center gap-2 text-sm pt-1">
+          <input type="checkbox" class="rounded" v-model="editor.activo" />
+          Activo
+        </label>
 
-    <!-- 5. PESTAÑA MÉTODOS DE PAGO (HU-06) -->
-    <div v-if="tabActiva === 'pagos'" class="space-y-4 max-w-2xl">
-      <div class="flex justify-between items-center">
-        <div>
-          <h3 class="font-bold text-base">Métodos de Pago Aceptados</h3>
-          <p class="text-xs text-text-muted">Define qué métodos suman al efectivo esperado del turno en caja.</p>
+        <p v-if="errorEditor" class="alerta-error" role="alert">{{ errorEditor }}</p>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" @click="cerrarEditor" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg">Cancelar</button>
+          <button type="submit" :disabled="ocupado || !conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">{{ ocupado ? 'Guardando...' : 'Guardar' }}</button>
         </div>
-        <button @click="abrirModalPago(null)" class="btn-primary text-xs">+ Nuevo Método</button>
-      </div>
-
-      <div class="bg-surface rounded-xl border border-border divide-y divide-border overflow-hidden">
-        <div v-for="m in metodosPago" :key="m.id" class="p-3.5 flex items-center justify-between text-sm">
-          <div>
-            <span class="font-bold text-text-primary">{{ m.nombre }}</span>
-            <span v-if="m.es_efectivo" class="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-success-bg text-success uppercase">
-              Efectivo
-            </span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <span class="text-xs text-text-muted">Orden: {{ m.orden }}</span>
-            <button @click="abrirModalPago(m)" class="btn-secondary text-xs">Editar</button>
-          </div>
-        </div>
-      </div>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { ref, computed, onMounted, onActivated, watch } from 'vue'
+import QRCode from 'qrcode'
 import { ajustesService } from '@/modules/ajustes/services/ajustesService'
+import { useAuthStore } from '@/stores/auth'
+import { useConexionStore } from '@/stores/conexion'
+import { useTemaStore } from '@/stores/tema'
+import { mensajeDeError } from '@/lib/sesionCaches'
+import IconoVehiculo from '@/components/IconoVehiculo.vue'
+import { instanteDesdeLocal, hoyEnZona, formatearFechaCorta, formatearFechaHora } from '@/utils/fecha'
 
 const authStore = useAuthStore()
+const conexion = useConexionStore()
+const temaStore = useTemaStore()
 
 const tabs = [
-  { id: 'negocio', label: 'Negocio y Ticket' },
-  { id: 'vehiculos', label: 'Tipos de Vehículo' },
-  { id: 'tarifas', label: 'Tarifas y Simulador' },
-  { id: 'planes', label: 'Planes Mensuales' },
-  { id: 'pagos', label: 'Métodos de Pago' }
+  { id: 'negocio', label: 'Negocio' },
+  { id: 'tipos', label: 'Tipos de vehículo' },
+  { id: 'tarifas', label: 'Tarifas' },
+  { id: 'planes', label: 'Planes mensuales' },
+  { id: 'pagos', label: 'Métodos de pago' },
+  { id: 'ticket', label: 'Ticket' },
+  { id: 'tema', label: 'Tema' }
 ]
+const ZONAS = [
+  { id: 'America/Bogota', label: 'Colombia (Bogotá)' },
+  { id: 'America/Lima', label: 'Perú (Lima)' },
+  { id: 'America/Guayaquil', label: 'Ecuador (Guayaquil)' },
+  { id: 'America/Panama', label: 'Panamá' },
+  { id: 'America/Caracas', label: 'Venezuela (Caracas)' },
+  { id: 'America/Mexico_City', label: 'México (CDMX)' },
+  { id: 'America/Santiago', label: 'Chile (Santiago)' },
+  { id: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' }
+]
+const MODOS_TICKET = [
+  { id: 'qr', label: 'QR en pantalla', ayuda: 'El cliente toma foto del QR. Recomendado si no hay impresora.' },
+  { id: 'termica', label: 'Impresora térmica', ayuda: 'Imprime el ticket de 58 u 80 mm (requiere el driver de la impresora).' },
+  { id: 'ninguno', label: 'Sin ticket', ayuda: 'No se entrega ticket; la salida se hace por placa.' }
+]
+const TEMAS = [
+  { id: 'light', label: 'Claro' },
+  { id: 'dark', label: 'Oscuro' },
+  { id: 'system', label: 'Sistema' }
+]
+// Ícono guardado en BD → nombre legible (IconoVehiculo elige el dibujo por nombre)
+const ICONOS_TIPO = { car: 'Carro', bike: 'Moto', truck: 'Camioneta', bicycle: 'Bicicleta', bus: 'Bus' }
 
 const tabActiva = ref('negocio')
-const guardando = ref(false)
 const mensajeExito = ref('')
 const errorMensaje = ref('')
+const guardando = ref(false)
+const ocupado = ref(false)
 
-const negocioForm = ref({
-  nombre: '',
-  nit: '',
-  direccion: '',
-  telefono: '',
-  modo_ticket: 'qr',
-  ancho_ticket_mm: 80,
-  texto_pie_comprobante: ''
-})
+const pqId = computed(() => authStore.parqueaderoId)
 
-const tiposVehiculo = ref([])
+// --- Datos ---
+const negocio = ref({})
+const erroresNegocio = ref({})
+const tipos = ref([])
 const tarifas = ref([])
-const planesMensuales = ref([])
-const metodosPago = ref([])
+const planes = ref([])
+const metodos = ref([])
 
-// Simuladores
-const simuladorTarifa = ref({
-  entrada: new Date().toISOString().slice(0, 16),
-  salida: new Date(Date.now() + 2 * 3600000).toISOString().slice(0, 16),
-  tarifaGeneralId: null,
-  tarifaNocturnaId: null
-})
-const resultadoSimulacionCobro = ref(null)
+const tiposActivos = computed(() => tipos.value.filter(t => t.activo))
 
-const simuladorPeriodo = ref({
-  planId: null,
-  fechaInicio: new Date().toISOString().slice(0, 10)
-})
-const resultadoSimulacionPeriodos = ref(null)
+function avisar(texto) {
+  errorMensaje.value = ''
+  mensajeExito.value = texto
+  setTimeout(() => { if (mensajeExito.value === texto) mensajeExito.value = '' }, 4000)
+}
+function fallar(err, porDefecto) {
+  mensajeExito.value = ''
+  errorMensaje.value = mensajeDeError(err, porDefecto)
+}
 
-async function cargarTodo() {
-  const pqId = authStore.parqueaderoId
-  if (!pqId) return
+function cambiarTab(id) {
+  tabActiva.value = id
+  errorMensaje.value = ''
+}
 
-  try {
-    const [negocio, tipos, tar, planes, pagos] = await Promise.all([
-      ajustesService.obtenerDatosNegocio(pqId),
-      ajustesService.listarTiposVehiculo(pqId),
-      ajustesService.listarTarifas(pqId),
-      ajustesService.listarPlanesMensuales(pqId),
-      ajustesService.listarMetodosPago(pqId)
-    ])
-
-    if (negocio) Object.assign(negocioForm.value, negocio)
-    tiposVehiculo.value = tipos
-    tarifas.value = tar
-    planesMensuales.value = planes
-    metodosPago.value = pagos
-
-    if (tar.length) simuladorTarifa.value.tarifaGeneralId = tar[0].id
-    if (planes.length) simuladorPeriodo.value.planId = planes[0].id
-  } catch (err) {
-    errorMensaje.value = err.message || 'Error al cargar ajustes'
+async function cargarNegocio() {
+  const d = await ajustesService.obtenerDatosNegocio(pqId.value)
+  negocio.value = {
+    ...d,
+    zona_horaria: d.zona_horaria || 'America/Bogota',
+    moneda: d.moneda || 'COP',
+    ancho_ticket_mm: d.ancho_ticket_mm || 80,
+    modo_ticket: d.modo_ticket || 'qr'
   }
 }
 
-async function guardarNegocio() {
-  guardando.value = true
-  errorMensaje.value = ''
-  mensajeExito.value = ''
+async function cargarCatalogos() {
+  const [t, ta, p, m] = await Promise.all([
+    ajustesService.listarTiposVehiculo(pqId.value),
+    ajustesService.listarTarifas(pqId.value),
+    ajustesService.listarPlanesMensuales(pqId.value),
+    ajustesService.listarMetodosPago(pqId.value)
+  ])
+  tipos.value = t
+  tarifas.value = ta
+  planes.value = p
+  metodos.value = [...m].sort((a, b) => (a.orden || 0) - (b.orden || 0))
+}
+
+async function cargarTodo() {
+  if (!pqId.value) return
   try {
-    await ajustesService.guardarDatosNegocio(authStore.parqueaderoId, negocioForm.value)
-    mensajeExito.value = 'Datos del negocio actualizados correctamente'
+    await Promise.all([
+      conexion.isOnline ? cargarNegocio() : Promise.resolve(),
+      cargarCatalogos()
+    ])
+    inicializarSimuladores()
   } catch (err) {
-    errorMensaje.value = err.message || 'No se pudo guardar la información'
+    fallar(err, 'No se pudieron cargar los ajustes')
+  }
+}
+
+// --- Negocio y ticket ---
+function validarNegocio() {
+  const e = {}
+  if (!negocio.value.nombre?.trim()) e.nombre = 'El nombre es obligatorio'
+  if (!negocio.value.nit?.trim()) e.nit = 'El NIT es obligatorio'
+  const d = Number(negocio.value.dias_aviso_vencimiento)
+  if (!Number.isInteger(d) || d < 0 || d > 60) e.dias = 'Debe ser un número entre 0 y 60'
+  erroresNegocio.value = e
+  return Object.keys(e).length === 0
+}
+
+async function guardarNegocio() {
+  if (!validarNegocio()) {
+    tabActiva.value = 'negocio'
+    return
+  }
+  guardando.value = true
+  try {
+    const d = await ajustesService.guardarDatosNegocio(pqId.value, negocio.value)
+    negocio.value = { ...negocio.value, ...d }
+    await authStore.refrescarPerfil()
+    avisar('Cambios guardados')
+  } catch (err) {
+    fallar(err, 'No se pudieron guardar los datos')
   } finally {
     guardando.value = false
   }
 }
 
-function ejecutarSimulacionCobro() {
-  const general = tarifas.value.find(t => t.id === simuladorTarifa.value.tarifaGeneralId)
-  if (!general) return alert('Selecciona una tarifa general')
+const archivoLogo = ref(null)
+const logoPreview = ref('')
+const errorLogo = ref('')
+const subiendoLogo = ref(false)
 
-  const nocturna = tarifas.value.find(t => t.id === simuladorTarifa.value.tarifaNocturnaId)
-
-  resultadoSimulacionCobro.value = ajustesService.simularCobroTarifa({
-    entradaAt: simuladorTarifa.value.entrada,
-    salidaAt: simuladorTarifa.value.salida,
-    tarifaGeneral: {
-      modalidad: general.modalidad,
-      valor: general.valor,
-      minutosGracia: general.minutos_gracia || 0,
-      minutosFraccion: general.minutos_fraccion || 15,
-      tope24h: general.tope_por_24h
-    },
-    tarifaNocturna: nocturna ? {
-      modalidad: nocturna.modalidad,
-      valor: nocturna.valor,
-      franjaInicio: nocturna.franja_inicio,
-      franjaFin: nocturna.franja_fin
-    } : null
-  })
+function seleccionarLogo(ev) {
+  errorLogo.value = ''
+  const f = ev.target.files?.[0]
+  archivoLogo.value = null
+  logoPreview.value = ''
+  if (!f) return
+  if (!['image/png', 'image/jpeg'].includes(f.type)) {
+    errorLogo.value = 'El logo debe ser PNG o JPG'
+    return
+  }
+  if (f.size > 1024 * 1024) {
+    errorLogo.value = 'El logo no puede superar 1 MB'
+    return
+  }
+  archivoLogo.value = f
+  logoPreview.value = URL.createObjectURL(f)
 }
 
-function ejecutarSimulacionPeriodos() {
-  const plan = planesMensuales.value.find(p => p.id === simuladorPeriodo.value.planId)
-  if (!plan) return alert('Selecciona un plan')
-
-  resultadoSimulacionPeriodos.value = ajustesService.simularPeriodosPlan({
-    tipoPeriodo: plan.tipo_periodo,
-    duracionDias: plan.duracion_dias || 30,
-    fechaInicio: simuladorPeriodo.value.fechaInicio,
-    cantidad: 3
-  })
+async function subirLogo() {
+  subiendoLogo.value = true
+  errorLogo.value = ''
+  try {
+    const url = await ajustesService.subirLogo(pqId.value, archivoLogo.value)
+    negocio.value.logo_url = url
+    archivoLogo.value = null
+    await authStore.refrescarPerfil()
+    avisar('Logo actualizado')
+  } catch (err) {
+    errorLogo.value = mensajeDeError(err, 'No se pudo subir el logo')
+  } finally {
+    subiendoLogo.value = false
+  }
 }
 
-function abrirModalTipo(tipo) {
-  // En Sprint 2 podemos interactuar mediante prompts o modales simples
-  const nombre = prompt('Nombre del Tipo de Vehículo:', tipo ? tipo.nombre : '')
-  if (!nombre) return
-  const capacidad = prompt('Capacidad de cupos:', tipo ? tipo.capacidad : '20')
-  ajustesService.guardarTipoVehiculo(authStore.parqueaderoId, {
-    id: tipo?.id,
-    nombre,
-    capacidad: parseInt(capacidad, 10) || 0
-  }).then(cargarTodo)
+// --- Editor genérico ---
+const editor = ref(null)
+const errorEditor = ref('')
+
+const tituloEditor = computed(() => {
+  if (!editor.value) return ''
+  const nuevo = !editor.value.datos.id
+  return {
+    tipo: nuevo ? 'Nuevo tipo de vehículo' : 'Editar tipo de vehículo',
+    tarifa: nuevo ? 'Nueva tarifa' : 'Editar tarifa',
+    plan: nuevo ? 'Nuevo plan mensual' : 'Editar plan mensual',
+    metodo: nuevo ? 'Nuevo método de pago' : 'Editar método de pago'
+  }[editor.value.clase]
+})
+
+function abrirEditor(clase, datos, activo = true) {
+  errorEditor.value = ''
+  editor.value = { clase, datos, activo, vehiculosDentro: 0 }
 }
 
-function abrirModalTarifa(tarifa) {
-  const nombre = prompt('Nombre de la Tarifa:', tarifa ? tarifa.nombre : 'Por Hora')
-  if (!nombre) return
-  const valor = prompt('Valor ($):', tarifa ? tarifa.valor : '3000')
-  const modalidad = prompt('Modalidad (por_hora | por_minuto | por_fraccion | plena):', tarifa ? tarifa.modalidad : 'por_hora')
-  
-  if (!tiposVehiculo.value.length) return alert('Crea primero un tipo de vehículo')
-
-  ajustesService.guardarTarifa(authStore.parqueaderoId, {
-    id: tarifa?.id,
-    tipo_vehiculo_id: tarifa?.tipo_vehiculo_id || tiposVehiculo.value[0].id,
-    nombre,
-    modalidad,
-    valor: parseInt(valor, 10),
-    es_predeterminada: true
-  }).then(cargarTodo)
+function cerrarEditor() {
+  if (!ocupado.value) editor.value = null
 }
 
-function abrirModalPlan(plan) {
-  const nombre = prompt('Nombre del Plan:', plan ? plan.nombre : 'Mensual Carro')
-  if (!nombre) return
-  const valor = prompt('Valor ($):', plan ? plan.valor : '150000')
-  const tipoPeriodo = prompt('Tipo periodo (mensual | dias_fijos):', plan ? plan.tipo_periodo : 'mensual')
-
-  if (!tiposVehiculo.value.length) return alert('Crea primero un tipo de vehículo')
-
-  ajustesService.guardarPlanMensual(authStore.parqueaderoId, {
-    id: plan?.id,
-    tipo_vehiculo_id: plan?.tipo_vehiculo_id || tiposVehiculo.value[0].id,
-    nombre,
-    valor: parseInt(valor, 10),
-    tipo_periodo: tipoPeriodo
-  }).then(cargarTodo)
+function editarTipo(t) {
+  abrirEditor('tipo', t
+    ? { id: t.id, nombre: t.nombre, icono: t.icono || 'car', capacidad: t.capacidad, orden: t.orden }
+    : { nombre: '', icono: 'car', capacidad: 10, orden: tipos.value.length + 1 }, t ? t.activo : true)
 }
 
-function abrirModalPago(metodo) {
-  const nombre = prompt('Nombre del Método de Pago:', metodo ? metodo.nombre : 'Efectivo')
-  if (!nombre) return
-  const esEfectivo = confirm('¿Es dinero en efectivo (suma al conteo de caja)?')
-
-  ajustesService.guardarMetodoPago(authStore.parqueaderoId, {
-    id: metodo?.id,
-    nombre,
-    es_efectivo: esEfectivo
-  }).then(cargarTodo)
+async function editarTarifa(t) {
+  const tipoDefecto = filtroTipoTarifa.value || tiposActivos.value[0]?.id || ''
+  abrirEditor('tarifa', t
+    ? {
+        id: t.id,
+        tipo_vehiculo_id: t.tipo_vehiculo_id,
+        nombre: t.nombre,
+        modalidad: t.modalidad,
+        valor: t.valor,
+        minutos_fraccion: t.minutos_fraccion || 15,
+        minutos_gracia: t.minutos_gracia || 0,
+        tope_por_24h: t.tope_por_24h || null,
+        es_predeterminada: t.es_predeterminada,
+        conFranja: !!t.franja_inicio,
+        franja_inicio: hhmm(t.franja_inicio) || '19:00',
+        franja_fin: hhmm(t.franja_fin) || '07:00'
+      }
+    : {
+        tipo_vehiculo_id: tipoDefecto,
+        nombre: '',
+        modalidad: 'por_hora',
+        valor: null,
+        minutos_fraccion: 15,
+        minutos_gracia: 0,
+        tope_por_24h: null,
+        es_predeterminada: false,
+        conFranja: false,
+        franja_inicio: '19:00',
+        franja_fin: '07:00'
+      }, t ? t.activa : true)
+  if (t) {
+    try {
+      editor.value.vehiculosDentro = await ajustesService.contarVehiculosConTarifa(pqId.value, t.id)
+    } catch (e) {}
+  }
 }
+
+function editarPlan(p) {
+  abrirEditor('plan', p
+    ? { id: p.id, tipo_vehiculo_id: p.tipo_vehiculo_id, nombre: p.nombre, valor: p.valor, tipo_periodo: p.tipo_periodo, duracion_dias: p.duracion_dias || 15, dias_gracia_pago: p.dias_gracia_pago || 0 }
+    : { tipo_vehiculo_id: tiposActivos.value[0]?.id || '', nombre: '', valor: null, tipo_periodo: 'mensual', duracion_dias: 15, dias_gracia_pago: 0 }, p ? p.activo : true)
+}
+
+function editarMetodo(m) {
+  abrirEditor('metodo', m
+    ? { id: m.id, nombre: m.nombre, es_efectivo: m.es_efectivo, orden: m.orden }
+    : { nombre: '', es_efectivo: false, orden: metodos.value.length + 1 }, m ? m.activo : true)
+}
+
+async function guardarEditor() {
+  const { clase, datos, activo } = editor.value
+  ocupado.value = true
+  errorEditor.value = ''
+  try {
+    if (clase === 'tipo') {
+      await ajustesService.guardarTipoVehiculo(pqId.value, { ...datos, activo })
+    } else if (clase === 'tarifa') {
+      await ajustesService.guardarTarifa(pqId.value, {
+        ...datos,
+        franja_inicio: datos.conFranja ? datos.franja_inicio : null,
+        franja_fin: datos.conFranja ? datos.franja_fin : null,
+        es_predeterminada: datos.conFranja ? false : datos.es_predeterminada,
+        minutos_gracia: datos.modalidad === 'plena' ? 0 : datos.minutos_gracia,
+        tope_por_24h: datos.modalidad === 'plena' ? null : datos.tope_por_24h,
+        activa: activo
+      })
+    } else if (clase === 'plan') {
+      await ajustesService.guardarPlanMensual(pqId.value, { ...datos, activo })
+    } else if (clase === 'metodo') {
+      await ajustesService.guardarMetodoPago(pqId.value, { ...datos, activo })
+    }
+    editor.value = null
+    await cargarCatalogos()
+    avisar('Cambios guardados')
+  } catch (err) {
+    errorEditor.value = mensajeDeError(err, 'No se pudo guardar')
+  } finally {
+    ocupado.value = false
+  }
+}
+
+async function alternar(accion, porDefecto) {
+  ocupado.value = true
+  try {
+    await accion()
+    await cargarCatalogos()
+    avisar('Cambios guardados')
+  } catch (err) {
+    fallar(err, porDefecto)
+  } finally {
+    ocupado.value = false
+  }
+}
+
+function alternarTipo(t) {
+  return alternar(() => ajustesService.guardarTipoVehiculo(pqId.value, { ...t, activo: !t.activo }), 'No se pudo cambiar el tipo')
+}
+function alternarTarifa(t) {
+  return alternar(() => ajustesService.guardarTarifa(pqId.value, {
+    ...t,
+    franja_inicio: hhmm(t.franja_inicio),
+    franja_fin: hhmm(t.franja_fin),
+    activa: !t.activa,
+    es_predeterminada: t.activa ? false : t.es_predeterminada
+  }), 'No se pudo cambiar la tarifa')
+}
+function alternarPlan(p) {
+  return alternar(() => ajustesService.guardarPlanMensual(pqId.value, { ...p, activo: !p.activo }), 'No se pudo cambiar el plan')
+}
+function alternarMetodo(m) {
+  return alternar(() => ajustesService.guardarMetodoPago(pqId.value, { ...m, activo: !m.activo }), 'No se pudo cambiar el método')
+}
+
+function moverMetodo(i, delta) {
+  const ids = metodos.value.map(m => m.id)
+  const j = i + delta
+  if (j < 0 || j >= ids.length) return
+  ;[ids[i], ids[j]] = [ids[j], ids[i]]
+  return alternar(() => ajustesService.reordenarMetodosPago(pqId.value, ids), 'No se pudo reordenar')
+}
+
+// --- Tarifas: listado y simulador ---
+const filtroTipoTarifa = ref('')
+const tarifasFiltradas = computed(() => filtroTipoTarifa.value
+  ? tarifas.value.filter(t => t.tipo_vehiculo_id === filtroTipoTarifa.value)
+  : tarifas.value)
+
+const MODALIDAD_TXT = { por_hora: 'por hora', por_minuto: 'por minuto', por_fraccion: 'por fracción', plena: 'plena (24 h)' }
+
+function describirTarifa(t) {
+  const partes = [`${pesos(t.valor)} ${MODALIDAD_TXT[t.modalidad] || t.modalidad}`]
+  if (t.modalidad === 'por_fraccion') partes.push(`fracción de ${t.minutos_fraccion} min`)
+  if (t.minutos_gracia) partes.push(`${t.minutos_gracia} min de gracia`)
+  if (t.tope_por_24h) partes.push(`tope ${pesos(t.tope_por_24h)} / 24 h`)
+  return partes.join(' · ')
+}
+
+const sim = ref({ tipoId: '', tarifaId: '', entrada: '', salida: '', resultado: null, error: '' })
+const tarifasGeneralesSim = computed(() => tarifas.value.filter(t => t.tipo_vehiculo_id === sim.value.tipoId && t.activa && !t.franja_inicio))
+
+watch(() => sim.value.tipoId, () => {
+  const pred = tarifasGeneralesSim.value.find(t => t.es_predeterminada) || tarifasGeneralesSim.value[0]
+  sim.value.tarifaId = pred?.id || ''
+  sim.value.resultado = null
+})
+
+function inicializarSimuladores() {
+  const hoy = hoyEnZona(authStore.zonaHoraria)
+  if (!sim.value.tipoId || !tipos.value.some(t => t.id === sim.value.tipoId)) {
+    sim.value.tipoId = tiposActivos.value[0]?.id || ''
+  }
+  if (!sim.value.entrada) sim.value.entrada = `${hoy}T17:00`
+  if (!sim.value.salida) sim.value.salida = `${hoy}T20:00`
+  if (!simPlan.value.planId) simPlan.value.planId = planes.value[0]?.id || ''
+  if (!simPlan.value.fechaInicio) simPlan.value.fechaInicio = hoy
+}
+
+function localAInstante(valor) {
+  const [fecha, hora] = valor.split('T')
+  const [y, m, d] = fecha.split('-').map(Number)
+  const [h, mi] = (hora || '00:00').split(':').map(Number)
+  return instanteDesdeLocal(y, m, d, h, mi, authStore.zonaHoraria)
+}
+
+function simularCobro() {
+  sim.value.error = ''
+  sim.value.resultado = null
+  try {
+    const general = tarifas.value.find(t => t.id === sim.value.tarifaId)
+    if (!general) throw new Error('Selecciona una tarifa general')
+    if (!sim.value.entrada || !sim.value.salida) throw new Error('Indica entrada y salida')
+    const nocturna = tarifas.value.find(t => t.tipo_vehiculo_id === sim.value.tipoId && t.activa && t.franja_inicio) || null
+    sim.value.resultado = ajustesService.simularCobroTarifa({
+      entradaAt: localAInstante(sim.value.entrada),
+      salidaAt: localAInstante(sim.value.salida),
+      tarifaGeneral: general,
+      tarifaNocturna: nocturna,
+      zonaHoraria: authStore.zonaHoraria
+    })
+  } catch (err) {
+    sim.value.error = err.message
+  }
+}
+
+// --- Planes: simulador ---
+const simPlan = ref({ planId: '', fechaInicio: '', periodos: [], error: '' })
+
+function simularPeriodos() {
+  simPlan.value.error = ''
+  simPlan.value.periodos = []
+  const plan = planes.value.find(p => p.id === simPlan.value.planId)
+  if (!plan) {
+    simPlan.value.error = 'Selecciona un plan'
+    return
+  }
+  try {
+    simPlan.value.periodos = ajustesService.simularPeriodosPlan({
+      tipoPeriodo: plan.tipo_periodo,
+      duracionDias: plan.duracion_dias,
+      fechaInicio: simPlan.value.fechaInicio
+    })
+  } catch (err) {
+    simPlan.value.error = err.message
+  }
+}
+
+// --- Ticket: vista previa e impresión de prueba ---
+const qrPrueba = ref('')
+const ahoraTexto = computed(() => formatearFechaHora(new Date(), authStore.zonaHoraria, { year: 'numeric' }))
+const tarifaEjemplo = computed(() => {
+  const t = tarifas.value.find(x => x.tipo_vehiculo_id === tiposActivos.value[0]?.id && x.es_predeterminada && x.activa)
+  return t ? `${t.nombre} (${pesos(t.valor)})` : 'Por hora'
+})
+
+async function generarQrPrueba() {
+  try {
+    qrPrueba.value = await QRCode.toDataURL('PARKCONTROL-TICKET-PRUEBA', { margin: 1, width: 160 })
+  } catch (e) {
+    qrPrueba.value = ''
+  }
+}
+
+function escapar(s) {
+  return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+}
+
+function imprimirPrueba() {
+  const ancho = negocio.value.ancho_ticket_mm === 58 ? 58 : 80
+  const ventana = window.open('', '_blank', 'width=420,height=640')
+  if (!ventana) {
+    fallar(new Error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para este sitio.'))
+    return
+  }
+  ventana.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Ticket de prueba</title>
+    <style>
+      @page { size: ${ancho}mm auto; margin: 0; }
+      body { width: ${ancho - 4}mm; margin: 0 2mm; font-family: monospace; font-size: ${ancho === 58 ? 10 : 12}px; color: #000; }
+      .c { text-align: center; } .b { font-weight: bold; } .placa { font-size: 1.6em; letter-spacing: 2px; }
+      hr { border: 0; border-top: 1px dashed #000; } img { display: block; margin: 4px auto; width: ${ancho === 58 ? 30 : 40}mm; }
+    </style></head><body>
+    <p class="c b">${escapar(negocio.value.nombre || 'Parqueadero')}</p>
+    <p class="c">NIT ${escapar(negocio.value.nit || '')}</p><hr>
+    <p class="c b placa">ABC123</p>
+    <p>Tipo: ${escapar(tiposActivos.value[0]?.nombre || 'Carro')}</p>
+    <p>Entrada: ${escapar(ahoraTexto.value)}</p>
+    <p>Tarifa: ${escapar(tarifaEjemplo.value)}</p>
+    ${qrPrueba.value ? `<img src="${qrPrueba.value}" alt="QR">` : ''}
+    <p class="c">*** TICKET DE PRUEBA ***</p>
+    ${negocio.value.texto_pie_comprobante ? `<p class="c">${escapar(negocio.value.texto_pie_comprobante)}</p>` : ''}
+    <script>window.onload = function () { window.print(); setTimeout(function () { window.close(); }, 500); };<\/script>
+    </body></html>`)
+  ventana.document.close()
+}
+
+// --- Utilidades ---
+function pesos(v) {
+  return `$${Number(v || 0).toLocaleString('es-CO')}`
+}
+function hhmm(t) {
+  return t ? String(t).slice(0, 5) : ''
+}
+function duracion(min) {
+  const m = Math.max(0, Math.round(min || 0))
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  return m % 60 ? `${h} h ${m % 60} min` : `${h} h`
+}
+
+watch(pqId, (nuevo) => { if (nuevo) cargarTodo() })
 
 onMounted(() => {
   cargarTodo()
+  generarQrPrueba()
 })
+onActivated(cargarTodo)
 </script>
 
 <style scoped>
-.input-field {
-  @apply w-full px-3 py-2 text-sm rounded-lg bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary transition-colors;
+.hint {
+  @apply text-2xs text-text-muted mt-1;
 }
-
-.btn-primary {
-  @apply px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm;
-}
-
-.btn-secondary {
-  @apply px-3 py-1.5 rounded-lg border border-border bg-surface text-text-primary hover:bg-surface-elevated transition-colors font-medium;
+.err {
+  @apply text-xs text-danger font-medium mt-1;
 }
 </style>

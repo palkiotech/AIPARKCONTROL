@@ -1,171 +1,146 @@
 import { supabase } from '@/lib/supabase'
+import { guardarReferencia, leerReferencia } from '@/offline/referencia'
+import { registrarLimpieza, esErrorDeRed, estaEnLinea } from '@/lib/sesionCaches'
 
-let turnoLocalActivo = {
-  id: 'a0000000-0000-0000-0000-000000000001',
-  abierto_at: new Date().toISOString(),
-  base_inicial: 50000,
-  efectivo_esperado: 50000,
-  estado: 'abierto',
-  profiles: { nombre: 'Operador de Turno (Prueba)' },
-  movimientos: []
-}
+/**
+ * Caja y turnos (HU-24).
+ * - No hay turnos de prueba ni apertura automática: si no hay turno, la vista
+ *   pide abrirlo con la base que indique el operador.
+ * - Los errores del servidor se propagan (antes se tragaban y se mostraba éxito).
+ * - Abrir, entregar y recibir requieren conexión en esta versión (ver CAMBIOS).
+ */
 
-let cacheTurno = null
+let cacheTurno // undefined = no consultado; null = no hay turno
+registrarLimpieza(() => { cacheTurno = undefined })
 
 export const cajaService = {
-  /**
-   * Obtiene el turno en memoria para renderizado instantáneo (0ms)
-   */
   obtenerTurnoCache() {
-    return cacheTurno || turnoLocalActivo
+    return cacheTurno
   },
 
   /**
-   * Obtiene el turno actualmente abierto o por recibir (HU-24)
+   * Turno abierto o por recibir del parqueadero, o null si no hay.
+   * Sin conexión devuelve la última copia local (solo lectura).
    */
   async obtenerTurnoActual(parqueaderoId) {
     if (!parqueaderoId) return null
 
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      cacheTurno = turnoLocalActivo
-      return turnoLocalActivo
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('turnos_caja')
-        .select('*, profiles!usuario_id(nombre)')
-        .eq('parqueadero_id', parqueaderoId)
-        .in('estado', ['abierto', 'por_recibir'])
-        .maybeSingle()
-
-      if (error) throw error
-      
-      if (data) {
-        cacheTurno = data
-        return data
-      }
-
-      // Si no existe turno abierto en Supabase, auto-abrimos el turno de prueba ($50.000)
-      // para que PostgreSQL tenga un turno_id real en turnos_caja y permita registrar salidas y cobros (HU-24)
+    if (estaEnLinea()) {
       try {
-        const { data: resRpc, error: errRpc } = await supabase.rpc('abrir_turno', {
-          p_base_inicial: 50000
-        })
-        if (!errRpc && resRpc?.turno_id) {
-          const { data: turnoCreado } = await supabase
-            .from('turnos_caja')
-            .select('*, profiles!usuario_id(nombre)')
-            .eq('id', resRpc.turno_id)
-            .maybeSingle()
-          if (turnoCreado) {
-            cacheTurno = turnoCreado
-            return turnoCreado
-          }
-        }
-      } catch (eAuto) {
-        console.warn('Auto-apertura de turno en Supabase no disponible:', eAuto)
+        const { data, error } = await supabase
+          .from('turnos_caja')
+          .select('*, profiles!turnos_caja_usuario_id_fkey(nombre)')
+          .eq('parqueadero_id', parqueaderoId)
+          .in('estado', ['abierto', 'por_recibir'])
+          .maybeSingle()
+        if (error) throw error
+        cacheTurno = data || null
+        await guardarReferencia(parqueaderoId, 'turno', cacheTurno)
+        return cacheTurno
+      } catch (err) {
+        if (!esErrorDeRed(err)) throw err
       }
-
-      const resultado = turnoLocalActivo
-      cacheTurno = resultado
-      return resultado
-    } catch (err) {
-      cacheTurno = turnoLocalActivo
-      return turnoLocalActivo
     }
+
+    if (cacheTurno === undefined) cacheTurno = await leerReferencia(parqueaderoId, 'turno')
+    return cacheTurno || null
   },
 
   /**
-   * Abre un nuevo turno indicando la base en efectivo
+   * Resumen del turno: base, entradas/salidas, cobros y pagos por método,
+   * movimientos y vehículos que quedan dentro.
    */
+  async obtenerResumen(turnoId = null) {
+    const { data, error } = await supabase.rpc('obtener_resumen_turno', { p_turno_id: turnoId })
+    if (error) throw error
+    return data
+  },
+
   async abrirTurno(baseInicial = 0) {
-    try {
-      const { data, error } = await supabase.rpc('abrir_turno', {
-        p_base_inicial: parseInt(baseInicial || 0, 10)
-      })
-      if (error) throw error
-      return data
-    } catch (err) {
-      turnoLocalActivo = {
-        id: crypto.randomUUID(),
-        abierto_at: new Date().toISOString(),
-        base_inicial: parseInt(baseInicial || 0, 10),
-        efectivo_esperado: parseInt(baseInicial || 0, 10),
-        estado: 'abierto',
-        movimientos: []
-      }
-      return { success: true, turno_id: turnoLocalActivo.id }
-    }
+    const { data, error } = await supabase.rpc('abrir_turno', {
+      p_base_inicial: parseInt(baseInicial || 0, 10)
+    })
+    if (error) throw error
+    cacheTurno = undefined
+    return data
   },
 
-  /**
-   * Quien sale entrega el turno y cuenta su efectivo
-   */
   async entregarTurno(turnoId, efectivoContado, observacion = '') {
-    try {
-      const { data, error } = await supabase.rpc('entregar_turno', {
-        p_turno_id: turnoId,
-        p_efectivo_contado: parseInt(efectivoContado, 10),
-        p_observacion: observacion?.trim()
-      })
-      if (error) throw error
-      return data
-    } catch (err) {
-      if (turnoLocalActivo) {
-        turnoLocalActivo.estado = 'por_recibir'
-        turnoLocalActivo.efectivo_contado = parseInt(efectivoContado, 10)
-        turnoLocalActivo.diferencia = parseInt(efectivoContado, 10) - turnoLocalActivo.efectivo_esperado
-        turnoLocalActivo.observacion = observacion
-      }
-      return { success: true, diferencia: parseInt(efectivoContado, 10) - (turnoLocalActivo?.efectivo_esperado || 0) }
-    }
+    const { data, error } = await supabase.rpc('entregar_turno', {
+      p_turno_id: turnoId,
+      p_efectivo_contado: parseInt(efectivoContado, 10),
+      p_observacion: observacion?.trim() || null
+    })
+    if (error) throw error
+    cacheTurno = undefined
+    return data
   },
 
-  /**
-   * Quien entra confirma la recepción y abre su nuevo turno con esa base
-   */
   async recibirTurno(turnoId, efectivoRecibido) {
-    try {
-      const { data, error } = await supabase.rpc('recibir_turno', {
-        p_turno_id: turnoId,
-        p_efectivo_recibido: parseInt(efectivoRecibido, 10)
-      })
-      if (error) throw error
-      return data
-    } catch (err) {
-      turnoLocalActivo = {
-        id: crypto.randomUUID(),
-        abierto_at: new Date().toISOString(),
-        base_inicial: parseInt(efectivoRecibido, 10),
-        efectivo_esperado: parseInt(efectivoRecibido, 10),
-        estado: 'abierto',
-        movimientos: []
-      }
-      return { success: true, nuevo_turno_id: turnoLocalActivo.id }
-    }
+    const { data, error } = await supabase.rpc('recibir_turno', {
+      p_turno_id: turnoId,
+      p_efectivo_recibido: parseInt(efectivoRecibido, 10)
+    })
+    if (error) throw error
+    cacheTurno = undefined
+    return data
   },
 
   /**
-   * Registra un retiro de efectivo o ingreso manual
+   * Cierre sin relevo (el parqueadero cierra o nadie recibe la caja).
    */
+  async cerrarSinRelevo(turnoId, efectivoContado = null, observacion = '') {
+    const { data, error } = await supabase.rpc('cerrar_turno_sin_relevo', {
+      p_turno_id: turnoId,
+      p_efectivo_contado: efectivoContado === null || efectivoContado === '' ? null : parseInt(efectivoContado, 10),
+      p_observacion: observacion?.trim() || null
+    })
+    if (error) throw error
+    cacheTurno = undefined
+    return data
+  },
+
   async registrarMovimiento(turnoId, tipo, valor, motivo) {
-    const val = parseInt(valor, 10)
-    try {
-      const { data, error } = await supabase.rpc('registrar_movimiento_caja', {
-        p_turno_id: turnoId,
-        p_tipo: tipo,
-        p_valor: val,
-        p_motivo: motivo.trim()
-      })
-      if (error) throw error
-      return data
-    } catch (err) {
-      if (turnoLocalActivo) {
-        if (tipo === 'retiro') turnoLocalActivo.efectivo_esperado -= val
-        else turnoLocalActivo.efectivo_esperado += val
-      }
-      return { success: true }
-    }
+    const { data, error } = await supabase.rpc('registrar_movimiento_caja', {
+      p_turno_id: turnoId,
+      p_tipo: tipo,
+      p_valor: parseInt(valor, 10),
+      p_motivo: (motivo || '').trim()
+    })
+    if (error) throw error
+    return data
+  },
+
+  /**
+   * Historial de turnos cerrados (admin, /caja/turnos).
+   * desde/hasta: instantes ISO UTC calculados en la zona del parqueadero.
+   */
+  async listarTurnos({ parqueaderoId, desde = null, hasta = null, limite = 100 }) {
+    let consulta = supabase
+      .from('turnos_caja')
+      .select('*, entrego:profiles!turnos_caja_usuario_id_fkey(nombre), recibio:profiles!turnos_caja_recibido_por_fkey(nombre)')
+      .eq('parqueadero_id', parqueaderoId)
+      .order('abierto_at', { ascending: false })
+      .limit(limite)
+    if (desde) consulta = consulta.gte('abierto_at', desde)
+    if (hasta) consulta = consulta.lt('abierto_at', hasta)
+    const { data, error } = await consulta
+    if (error) throw error
+    return data || []
+  },
+
+  async agregarNota(turnoId, nota) {
+    const { data, error } = await supabase.rpc('agregar_nota_turno', { p_turno_id: turnoId, p_nota: nota })
+    if (error) throw error
+    return data
+  },
+
+  suscribirCambios(parqueaderoId, onCambio) {
+    if (!parqueaderoId) return () => {}
+    const canal = supabase
+      .channel(`caja-${parqueaderoId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'turnos_caja', filter: `parqueadero_id=eq.${parqueaderoId}` }, () => onCambio())
+      .subscribe()
+    return () => { supabase.removeChannel(canal) }
   }
 }

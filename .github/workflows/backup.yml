@@ -22,11 +22,15 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f backup.sql
+          # Sin --data-only, "db dump" solo exporta el esquema: hacen falta los dos
+          mkdir -p respaldo
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f respaldo/esquema.sql
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" --data-only -f respaldo/datos.sql
+          test -s respaldo/esquema.sql && test -s respaldo/datos.sql
 
       - name: Almacenar respaldo como artefacto privado
         uses: actions/upload-artifact@v4
         with:
           name: supabase-backup-${{ github.run_id }}
-          path: backup.sql
+          path: respaldo/
           retention-days: 90

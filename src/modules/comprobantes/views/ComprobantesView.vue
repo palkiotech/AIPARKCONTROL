@@ -1,268 +1,162 @@
 <template>
-  <div class="space-y-6">
-    <!-- Encabezado de Sección -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div>
-        <h2 class="text-xl md:text-2xl font-bold tracking-tight text-text-primary">Comprobantes de Pago</h2>
-        <p class="text-xs md:text-sm text-text-secondary">
-          Historial de comprobantes emitidos, consecutivos oficiales y reimpresión con copia (HU-20 a HU-22).
-        </p>
-      </div>
-
-      <button 
-        @click="cargarComprobantes" 
-        :disabled="cargando"
-        class="inline-flex items-center justify-center space-x-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
-      >
-        <svg class="w-4 h-4" :class="{ 'animate-spin': cargando }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        <span>Refrescar</span>
-      </button>
+  <div class="space-y-6 max-w-5xl">
+    <div>
+      <h2 class="titulo-pagina">Comprobantes</h2>
+      <p class="subtitulo-pagina">Comprobantes emitidos por consecutivo. La re-descarga sale con el mismo número y la marca "Copia".</p>
     </div>
 
-    <!-- Filtros de Búsqueda -->
-    <div class="bg-surface rounded-2xl border border-border p-4 shadow-sm space-y-3">
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-        <!-- Búsqueda texto -->
-        <div class="space-y-1">
-          <label class="block text-xs font-medium text-text-secondary">Buscar</label>
-          <input 
-            v-model="filtroTexto" 
-            type="text" 
-            placeholder="Consecutivo, placa o cliente..." 
-            class="input-field text-xs"
-          />
-        </div>
+    <div v-if="!conexion.isOnline" class="alerta-aviso">La consulta de comprobantes requiere conexión.</div>
+    <div v-if="errorMensaje" class="alerta-error" role="alert">{{ errorMensaje }}</div>
 
-        <!-- Tipo de Origen -->
-        <div class="space-y-1">
-          <label class="block text-xs font-medium text-text-secondary">Tipo de Servicio</label>
-          <select v-model="filtroOrigen" class="input-field text-xs">
-            <option value="todos">Todos los servicios</option>
-            <option value="registro">Por horas (Patio)</option>
-            <option value="pago_mensualidad">Mensualidades</option>
-          </select>
-        </div>
+    <div class="card-craft p-4 sm:p-5 space-y-4">
+      <form class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end" @submit.prevent="cargar">
+        <label><span class="etiqueta">Desde</span><input v-model="desde" type="date" class="campo" /></label>
+        <label><span class="etiqueta">Hasta</span><input v-model="hasta" type="date" class="campo" /></label>
+        <label class="sm:col-span-2"><span class="etiqueta">Buscar (consecutivo o placa)</span><input v-model="busqueda" type="text" placeholder="Ej. 125 o ABC123" class="campo" /></label>
+        <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="cargando || !conexion.isOnline">Buscar</button>
+      </form>
 
-        <!-- Fecha Desde -->
-        <div class="space-y-1">
-          <label class="block text-xs font-medium text-text-secondary">Fecha Desde</label>
-          <input v-model="filtroFechaDesde" type="date" class="input-field text-xs" />
-        </div>
-
-        <!-- Fecha Hasta -->
-        <div class="space-y-1">
-          <label class="block text-xs font-medium text-text-secondary">Fecha Hasta</label>
-          <input v-model="filtroFechaHasta" type="date" class="input-field text-xs" />
-        </div>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm pt-3 border-t border-border-subtle">
+        <span class="text-text-secondary text-xs font-medium">Formato del PDF</span>
+        <label class="flex items-center gap-1.5 cursor-pointer"><input v-model="formato" type="radio" value="carta" /> Carta</label>
+        <label class="flex items-center gap-1.5 cursor-pointer"><input v-model="formato" type="radio" value="termica" /> Térmica {{ authStore.parqueadero?.ancho_ticket_mm || 80 }} mm</label>
       </div>
     </div>
 
-    <!-- Mensaje Informativo de Éxito / Alerta -->
-    <div v-if="mensajeAlerta" class="p-3 bg-success-bg border border-success text-success text-xs rounded-xl flex items-center justify-between">
-      <span>{{ mensajeAlerta }}</span>
-      <button @click="mensajeAlerta = ''" class="font-bold underline ml-2">Cerrar</button>
+    <div v-if="cargando" class="vacio py-16">
+      <div class="spinner"></div>
+      <span class="text-xs">Cargando comprobantes…</span>
+    </div>
+    <div v-else-if="!comprobantes.length" class="card-craft vacio">
+      <p class="font-medium text-text-primary">Sin resultados</p>
+      <p class="text-xs">No hay comprobantes con esos filtros.</p>
     </div>
 
-    <!-- Tabla de Comprobantes -->
-    <div class="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-surface-elevated text-text-secondary border-b border-border uppercase font-semibold text-[11px]">
-            <tr>
-              <th class="px-4 py-3">Consecutivo</th>
-              <th class="px-4 py-3">Origen</th>
-              <th class="px-4 py-3">Fecha y Hora</th>
-              <th class="px-4 py-3">Cliente</th>
-              <th class="px-4 py-3">Documento</th>
-              <th class="px-4 py-3 text-right">Valor</th>
-              <th class="px-4 py-3 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-border">
-            <tr v-if="cargando" class="text-center text-text-muted">
-              <td colspan="7" class="py-8">Cargando comprobantes...</td>
-            </tr>
-            <tr v-else-if="comprobantesFiltrados.length === 0" class="text-center text-text-muted">
-              <td colspan="7" class="py-8">No se encontraron comprobantes con los filtros seleccionados.</td>
-            </tr>
-            <tr 
-              v-for="c in comprobantesFiltrados" 
-              :key="c.id" 
-              class="hover:bg-surface-elevated/50 transition-colors"
-            >
-              <!-- Consecutivo -->
-              <td class="px-4 py-3 font-mono font-bold">
-                <span v-if="c.consecutivo" class="text-primary">
-                  #{{ String(c.consecutivo).padStart(6, '0') }}
-                </span>
-                <span v-else class="text-warning bg-warning-bg px-2 py-0.5 rounded-full text-[10px]">
-                  Provisional
-                </span>
-              </td>
-
-              <!-- Origen -->
-              <td class="px-4 py-3">
-                <span 
-                  class="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                  :class="c.origen === 'registro' ? 'bg-primary-bg text-primary' : 'bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400'"
-                >
-                  {{ c.origen === 'registro' ? 'Por Horas' : 'Mensualidad' }}
-                </span>
-              </td>
-
-              <!-- Fecha -->
-              <td class="px-4 py-3 text-text-secondary">
-                {{ formatearFecha(c.created_at) }}
-              </td>
-
-              <!-- Cliente -->
-              <td class="px-4 py-3 font-medium text-text-primary">
-                {{ c.cliente_nombre || 'Consumidor final' }}
-              </td>
-
-              <!-- Documento -->
-              <td class="px-4 py-3 text-text-secondary font-mono">
-                {{ c.cliente_documento || '—' }}
-              </td>
-
-              <!-- Valor -->
-              <td class="px-4 py-3 text-right font-bold text-text-primary font-mono">
-                ${{ (c.valor || 0).toLocaleString() }}
-              </td>
-
-              <!-- Acciones de Descarga y Reimpresión (HU-22) -->
-              <td class="px-4 py-3">
-                <div class="flex items-center justify-center space-x-1.5">
-                  <button 
-                    @click="descargar(c, false)" 
-                    class="px-2 py-1 bg-surface-elevated hover:bg-primary hover:text-white border border-border text-text-secondary rounded-lg font-medium text-[11px] transition-colors"
-                    title="Descargar PDF Original"
-                  >
-                    Original
+    <template v-else>
+      <!-- Tabla en escritorio -->
+      <div class="hidden sm:block card-craft overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>N°</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Placa</th>
+                <th>Origen</th>
+                <th class="text-right">Valor</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in comprobantes" :key="c.id">
+                <td class="font-semibold num-tabular">{{ numero(c.consecutivo) }}</td>
+                <td class="text-text-secondary whitespace-nowrap">{{ fh(c.created_at) }}</td>
+                <td>{{ c.cliente_nombre }}<span v-if="c.cliente_documento" class="text-text-muted"> · {{ c.cliente_documento }}</span></td>
+                <td class="font-mono text-xs font-semibold tracking-wider">{{ c.placa || '—' }}</td>
+                <td class="text-text-secondary">
+                  {{ c.origen === 'registro' ? 'Parqueo' : 'Mensualidad' }}
+                  <span v-if="c.anulado" class="badge-pastel-rose px-2 py-0.5 rounded-full text-2xs ml-1">Anulado</span>
+                </td>
+                <td class="text-right font-semibold num-tabular">{{ pesos(c.valor) }}</td>
+                <td class="text-right">
+                  <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :disabled="descargando === c.id" @click="descargar(c)">
+                    {{ descargando === c.id ? 'Generando…' : 'Descargar copia' }}
                   </button>
-                  <button 
-                    @click="descargar(c, true)" 
-                    class="px-2 py-1 bg-surface-elevated hover:bg-warning hover:text-white border border-border text-text-secondary rounded-lg font-medium text-[11px] transition-colors"
-                    title="Reimprimir copia con marca de agua (HU-22)"
-                  >
-                    Copia
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      <!-- Tarjetas en celular -->
+      <div class="sm:hidden space-y-2">
+        <div v-for="c in comprobantes" :key="'m' + c.id" class="card-craft p-4 text-sm space-y-1">
+          <div class="flex justify-between">
+            <strong class="font-semibold num-tabular">N° {{ numero(c.consecutivo) }}</strong>
+            <strong class="font-semibold num-tabular">{{ pesos(c.valor) }}</strong>
+          </div>
+          <p class="text-xs text-text-secondary">{{ fh(c.created_at) }} · {{ c.origen === 'registro' ? 'Parqueo' : 'Mensualidad' }} · {{ c.placa || '—' }}</p>
+          <p class="text-text-primary">{{ c.cliente_nombre }}</p>
+          <div class="flex justify-between items-center pt-2">
+            <span v-if="c.anulado" class="badge-pastel-rose px-2 py-0.5 rounded-full text-2xs">Anulado</span>
+            <span v-else></span>
+            <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :disabled="descargando === c.id" @click="descargar(c)">Descargar copia</button>
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, onActivated } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { comprobanteService } from '../services/comprobanteService'
+import { useConexionStore } from '@/stores/conexion'
+import { comprobanteService } from '@/modules/comprobantes/services/comprobanteService'
+import { mensajeDeError } from '@/lib/sesionCaches'
+import { hoyEnZona, sumarDias, formatearFechaHora } from '@/utils/fecha'
 
 const authStore = useAuthStore()
+const conexion = useConexionStore()
+const claseInput = 'campo'
 
-const cargando = ref(false)
+const hoy = hoyEnZona(authStore.zonaHoraria)
+const desde = ref(sumarDias(hoy, -30))
+const hasta = ref(hoy)
+const busqueda = ref('')
+const formato = ref(authStore.parqueadero?.modo_ticket === 'termica' ? 'termica' : 'carta')
 const comprobantes = ref([])
-const mensajeAlerta = ref('')
+const cargando = ref(false)
+const descargando = ref(null)
+const errorMensaje = ref('')
 
-const filtroTexto = ref('')
-const filtroOrigen = ref('todos')
-const filtroFechaDesde = ref('')
-const filtroFechaHasta = ref('')
+function pesos(v) { return `$${Number(v || 0).toLocaleString('es-CO')}` }
+function fh(v) { return formatearFechaHora(v, authStore.zonaHoraria, { year: 'numeric' }) }
+function numero(n) { return String(n).padStart(6, '0') }
 
-const comprobantesFiltrados = computed(() => {
-  return comprobantes.value.filter(c => {
-    // Filtro texto
-    if (filtroTexto.value.trim()) {
-      const q = filtroTexto.value.toLowerCase()
-      const matchConsecutivo = c.consecutivo ? String(c.consecutivo).includes(q) : false
-      const matchCliente = c.cliente_nombre ? c.cliente_nombre.toLowerCase().includes(q) : false
-      const matchDoc = c.cliente_documento ? c.cliente_documento.toLowerCase().includes(q) : false
-      if (!matchConsecutivo && !matchCliente && !matchDoc) return false
-    }
-
-    // Filtro origen
-    if (filtroOrigen.value !== 'todos' && c.origen !== filtroOrigen.value) {
-      return false
-    }
-
-    // Filtro fechas
-    if (filtroFechaDesde.value) {
-      const desde = new Date(filtroFechaDesde.value).setHours(0, 0, 0, 0)
-      const fechaC = new Date(c.created_at).getTime()
-      if (fechaC < desde) return false
-    }
-
-    if (filtroFechaHasta.value) {
-      const hasta = new Date(filtroFechaHasta.value).setHours(23, 59, 59, 999)
-      const fechaC = new Date(c.created_at).getTime()
-      if (fechaC > hasta) return false
-    }
-
-    return true
-  })
-})
-
-async function cargarComprobantes() {
+async function cargar() {
+  if (!conexion.isOnline) return
+  errorMensaje.value = ''
   cargando.value = true
   try {
-    const data = await comprobanteService.listarComprobantes(authStore.parqueadero?.id)
-    comprobantes.value = data || []
-  } catch (err) {
-    console.error('Error al cargar comprobantes:', err)
+    comprobantes.value = await comprobanteService.listarComprobantes({
+      desde: desde.value,
+      hasta: hasta.value,
+      busqueda: busqueda.value.trim()
+    })
+  } catch (e) {
+    errorMensaje.value = mensajeDeError(e, 'No se pudieron cargar los comprobantes')
   } finally {
     cargando.value = false
   }
 }
 
-function formatearFecha(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-CO', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  })
-}
-
-function descargar(c, esCopia) {
-  const detalle = {
-    tipo: c.origen === 'pago_mensualidad' ? 'mensualidad' : 'hora',
-    placa: c.placa || 'VEH-000',
-    tipoVehiculo: 'Vehículo',
-    entrada: formatearFecha(c.created_at),
-    salida: formatearFecha(c.created_at),
-    minutos: 60,
-    metodoPago: 'Efectivo',
-    cajero: 'Cajero en turno',
-    periodoDesde: '2026-11-01',
-    periodoHasta: '2026-11-30'
+async function descargar(c) {
+  descargando.value = c.id
+  errorMensaje.value = ''
+  try {
+    const { comprobante, detalle, parqueadero } = await comprobanteService.obtenerDetalle(c.id)
+    await comprobanteService.descargarPDF({
+      parqueadero: { ...parqueadero, modo_ticket: authStore.parqueadero?.modo_ticket },
+      comprobante,
+      detalle,
+      esCopia: true,
+      formato: formato.value
+    })
+  } catch (e) {
+    errorMensaje.value = mensajeDeError(e, 'No se pudo generar el comprobante')
+  } finally {
+    descargando.value = null
   }
-
-  comprobanteService.descargarPDF({
-    parqueadero: authStore.parqueadero || {
-      nombre: 'PARKCONTROL PARKING',
-      nit: '900.123.456-7',
-      direccion: 'Carrera 15 # 85-20',
-      telefono: '3001234567',
-      modo_ticket: 'termica',
-      ancho_ticket_mm: 80,
-      texto_pie_comprobante: 'Régimen simplificado. Conserve este comprobante para cualquier reclamo.'
-    },
-    comprobante: c,
-    detalle,
-    esCopia
-  })
-
-  mensajeAlerta.value = esCopia 
-    ? `Comprobante #${c.consecutivo || 'prov'} descargado con marca de agua COPIA.`
-    : `Comprobante #${c.consecutivo || 'prov'} descargado correctamente.`
 }
 
-onMounted(() => {
-  cargarComprobantes()
+// Con <keep-alive> onActivated también corre tras el primer montaje: se omite esa vez
+let primeraActivacion = true
+onMounted(cargar)
+onActivated(() => {
+  if (primeraActivacion) { primeraActivacion = false; return }
+  cargar()
 })
 </script>

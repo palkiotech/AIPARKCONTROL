@@ -1,5 +1,7 @@
 # ParkControl · Documento Maestro y Memoria Integral del Proyecto
 
+> ⚠️ **Documento desactualizado (11-nov-2026).** Varias afirmaciones de este documento no se sostenían en el código: estados "100% operativo", turno abierto en automático con $50.000, "minutos de gracia = 0" fijo y modalidades `fraccion_15m`/`pleno`, entre otras. La fuente vigente es **`CAMBIOS_v1.1.md`** (estado real y pendientes) junto con `PLAN_V2.md` (especificación).
+
 > **Versión del Sistema:** 1.0.0-beta  
 > **Fecha de Actualización:** 11 de Noviembre de 2026  
 > **Arquitectura:** Progressive Web App (PWA) Multi-Tenant · Offline-First · Serverless  

@@ -11,12 +11,19 @@ const routes = [
         path: '',
         name: 'dashboard',
         component: () => import('@/modules/dashboard/views/DashboardView.vue'),
-        meta: { requiresAuth: true, roles: ['admin', 'superadmin'] }
+        // El spec (HU-23) pide Dashboard para admin y operador; el operador no ve ingresos
+        meta: { requiresAuth: true, roles: ['admin', 'operador'] }
       },
       {
         path: 'ocupacion',
         name: 'ocupacion',
         component: () => import('@/modules/ocupacion/views/OcupacionView.vue'),
+        meta: { requiresAuth: true, roles: ['admin', 'operador'] }
+      },
+      {
+        path: 'historial',
+        name: 'historial',
+        component: () => import('@/modules/ocupacion/views/HistorialView.vue'),
         meta: { requiresAuth: true, roles: ['admin', 'operador'] }
       },
       {
@@ -30,6 +37,12 @@ const routes = [
         name: 'caja',
         component: () => import('@/modules/caja/views/CajaView.vue'),
         meta: { requiresAuth: true, roles: ['admin', 'operador'] }
+      },
+      {
+        path: 'caja/turnos',
+        name: 'turnos',
+        component: () => import('@/modules/caja/views/TurnosView.vue'),
+        meta: { requiresAuth: true, roles: ['admin'] }
       },
       {
         path: 'comprobantes',
@@ -50,6 +63,12 @@ const routes = [
         meta: { requiresAuth: true, roles: ['admin'] }
       },
       {
+        path: 'usuarios',
+        name: 'usuarios',
+        component: () => import('@/modules/usuarios/views/UsuariosView.vue'),
+        meta: { requiresAuth: true, roles: ['admin'] }
+      },
+      {
         path: 'superadmin',
         name: 'superadmin',
         component: () => import('@/modules/superadmin/views/SuperadminView.vue'),
@@ -67,7 +86,9 @@ const routes = [
     path: '/recuperar',
     name: 'recuperar',
     component: () => import('@/modules/auth/views/RecuperarView.vue'),
-    meta: { public: true }
+    // Pública también con sesión: el enlace de invitación/recuperación inicia
+    // sesión y aquí se define la contraseña
+    meta: { public: true, permitirConSesion: true }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -80,42 +101,32 @@ const router = createRouter({
   routes
 })
 
-// Guards de navegación por rol y autenticación (HU-02, HU-04, HU-05)
-router.beforeEach(async (to, from, next) => {
-  const authStore = useAuthStore()
+export function rutaInicioPorRol(authStore) {
+  if (authStore.isSuperadmin) return { name: 'superadmin' }
+  if (authStore.isAdmin) return { name: 'dashboard' }
+  return { name: 'ocupacion' }
+}
 
-  // Si la sesión no ha cargado aún, esperar inicialización
-  if (authStore.loading) {
-    await authStore.inicializarSesion()
-  }
+// Guards de navegación por rol y autenticación (HU-02, HU-04, HU-05)
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+  await authStore.inicializarSesion()
 
   const isPublic = to.meta.public === true
-  const isAuthenticated = authStore.isAuthenticated
 
-  if (!isAuthenticated && !isPublic) {
-    return next({ name: 'login', query: { redirect: to.fullPath } })
+  if (!authStore.isAuthenticated && !isPublic) {
+    return { name: 'login', query: to.fullPath !== '/' ? { redirect: to.fullPath } : {} }
   }
 
-  if (isAuthenticated && isPublic) {
-    // Redirección inteligente al iniciar sesión según rol
-    if (authStore.isSuperadmin) {
-      return next({ name: 'superadmin' })
-    } else if (authStore.isAdmin) {
-      return next({ name: 'dashboard' })
-    } else {
-      return next({ name: 'ocupacion' })
-    }
+  if (authStore.isAuthenticated && isPublic && !to.meta.permitirConSesion) {
+    return rutaInicioPorRol(authStore)
   }
 
-  // Validación de permisos de ruta por rol
   if (to.meta.roles && !to.meta.roles.includes(authStore.userRole)) {
-    // Si no tiene permiso, enviar al inicio de su rol
-    if (authStore.isSuperadmin) return next({ name: 'superadmin' })
-    if (authStore.isAdmin) return next({ name: 'dashboard' })
-    return next({ name: 'ocupacion' })
+    return rutaInicioPorRol(authStore)
   }
 
-  next()
+  return true
 })
 
 export default router

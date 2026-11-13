@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'ParkControl',
         short_name: 'ParkControl',
         description: 'Gestión inteligente y ágil para parqueaderos',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        theme_color: '#1d4ed8',
+        background_color: '#f5f6f8',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
@@ -28,6 +28,12 @@ export default defineConfig({
             src: '/icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png'
+          },
+          {
+            src: '/icons/icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },

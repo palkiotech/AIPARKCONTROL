@@ -1,321 +1,387 @@
 <template>
   <div class="space-y-6 max-w-3xl">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
-        <h2 class="text-xl md:text-2xl font-bold">Caja y Turnos</h2>
-        <p class="text-xs md:text-sm text-text-secondary">Control del efectivo, retiros y flujo de entrega de turno.</p>
+        <h2 class="titulo-pagina">Caja y turnos</h2>
+        <p class="subtitulo-pagina">Base, cobros del turno, retiros y entrega de caja.</p>
       </div>
-
-      <div v-if="mensajeExito" class="px-3 py-1.5 rounded-lg bg-success-bg text-success text-xs font-semibold border border-success/20">
-        {{ mensajeExito }}
-      </div>
-      <div v-if="errorMensaje" class="px-3 py-1.5 rounded-lg bg-danger-bg text-danger text-xs font-semibold border border-danger/20">
-        {{ errorMensaje }}
-      </div>
+      <router-link v-if="authStore.isAdmin" to="/caja/turnos" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg">
+        Historial de turnos
+      </router-link>
     </div>
 
-    <!-- Indicador de Carga / Spinner -->
-    <div v-if="cargando" class="flex flex-col items-center justify-center py-20 text-text-muted space-y-3">
-      <div class="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-      <span class="text-xs font-semibold">Consultando estado de caja...</span>
+    <div v-if="mensajeExito" class="alerta-exito">{{ mensajeExito }}</div>
+    <div v-if="errorMensaje" class="alerta-error" role="alert">{{ errorMensaje }}</div>
+    <div v-if="!conexion.isOnline" class="alerta-aviso">
+      Sin conexión: abrir, entregar, recibir y registrar movimientos de caja requieren internet. Se muestra la última copia guardada.
+    </div>
+
+    <div v-if="cargando" class="vacio py-20">
+      <div class="spinner"></div>
+      <span class="text-xs">Consultando estado de caja…</span>
     </div>
 
     <template v-else>
-      <!-- ESTADO 1: SIN TURNO ABIERTO (PIDE ABRIR TURNO CON BASE) -->
-      <div v-if="!turnoActual || turnoActual.estado === 'cerrado'" class="bg-surface rounded-2xl border border-border p-6 text-center space-y-4">
-      <div class="w-12 h-12 bg-warning-bg text-warning rounded-full mx-auto flex items-center justify-center font-bold text-xl">
-        !
-      </div>
-      <h3 class="font-bold text-lg">No hay un turno de caja abierto</h3>
-      <p class="text-xs text-text-muted max-w-md mx-auto">
-        Para poder cobrar salidas y registrar pagos en efectivo es obligatorio abrir un turno e indicar la base inicial de caja.
-      </p>
-
-      <div class="max-w-xs mx-auto space-y-3 pt-2">
-        <div>
-          <label class="block text-xs font-semibold text-text-secondary mb-1">Base Inicial en Efectivo ($)</label>
-          <input 
-            v-model.number="formAbrir.base"
-            type="number" 
-            placeholder="0"
-            class="input-field text-center font-bold text-lg"
-          />
+      <!-- SIN TURNO: ABRIR CON BASE -->
+      <div v-if="!turno" class="card-craft p-6 sm:p-8 text-center space-y-4">
+        <div class="w-12 h-12 bg-warning-bg text-warning border border-warning-border rounded-full mx-auto flex items-center justify-center">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
         </div>
-        <button @click="abrirNuevoTurno" class="btn-primary w-full text-sm py-2.5">
-          Abrir Turno con Base
-        </button>
-      </div>
-    </div>
-
-    <!-- ESTADO 2: TURNO ABIERTO EN CURSO (RESUMEN EN VIVO) -->
-    <div v-else-if="turnoActual.estado === 'abierto'" class="space-y-4">
-      <!-- Tarjetas de Caja en Pastel Menta y Sky -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="card-craft pastel-card-mint p-5 space-y-1 relative overflow-hidden">
-          <div class="flex justify-between items-start">
-            <span class="text-[11px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Efectivo Esperado en Caja</span>
-            <span class="badge-pastel-mint text-[10px] font-black px-2 py-0.5 rounded-full">
-              Saldo Vivo
-            </span>
-          </div>
-          <p class="text-4xl font-black text-emerald-700 dark:text-emerald-400 font-mono num-tabular tracking-tight">
-            ${{ (turnoActual.efectivo_esperado || 0).toLocaleString() }}
-          </p>
-          <p class="text-xs text-text-secondary pt-1 font-medium">
-            Base inicial de apertura: <strong class="text-text-primary num-tabular">${{ (turnoActual.base_inicial || 0).toLocaleString() }}</strong>
+        <div class="space-y-1">
+          <h3 class="text-lg font-semibold text-text-primary">No hay un turno de caja abierto</h3>
+          <p class="text-sm text-text-secondary max-w-md mx-auto">
+            Sin turno abierto no se pueden cobrar salidas ni pagos de mensualidad. Indica el efectivo con el que inicias (si no hay base, déjalo vacío).
           </p>
         </div>
-
-        <div class="card-craft pastel-card-sky p-5 space-y-3">
-          <div class="flex justify-between items-center text-xs">
-            <span class="text-sky-800 dark:text-sky-300 font-bold text-[11px] uppercase tracking-wider">Estado del Turno</span>
-            <span class="badge-pastel-mint px-2 py-0.5 rounded-full font-black uppercase text-[10px] inline-flex items-center space-x-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Abierto en Vivo</span>
-            </span>
-          </div>
-          <div class="text-xs space-y-1.5 text-text-secondary">
-            <p class="flex justify-between">
-              <span>Hora de apertura:</span>
-              <strong class="font-mono text-text-primary">{{ formatearHora(turnoActual.abierto_at) }}</strong>
-            </p>
-            <p class="flex justify-between">
-              <span>Cajero responsable:</span>
-              <strong class="text-text-primary">{{ turnoActual.profiles?.nombre || 'Operador actual' }}</strong>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Acciones de Caja -->
-      <div class="flex flex-wrap gap-2.5 pt-1">
-        <button @click="mostrarModalRetiro = true" class="px-4 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-elevated text-text-primary font-bold text-xs shadow-xs transition-all active:scale-95 flex items-center space-x-2">
-          <span>💸</span>
-          <span>Registrar Retiro / Ingreso</span>
-        </button>
-        <button @click="mostrarModalEntrega = true" class="px-4 py-2.5 rounded-xl btn-craft-primary text-white font-bold text-xs shadow-xs transition-all active:scale-95 flex items-center space-x-2">
-          <span>🤝</span>
-          <span>Entregar Turno al Relevo</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- ESTADO 3: TURNO POR RECIBIR (ENTREGA EN PROCESO) -->
-    <div v-else-if="turnoActual.estado === 'por_recibir'" class="bg-surface rounded-2xl border border-warning/40 p-6 space-y-4">
-      <div class="flex items-center space-x-2 text-warning font-bold text-sm">
-        <span>🤝 Relevo de Turno en Proceso</span>
-      </div>
-      <p class="text-xs text-text-secondary">
-        El operador saliente contó <strong>${{ (turnoActual.efectivo_contado || 0).toLocaleString() }}</strong> en efectivo (Diferencia: ${{ (turnoActual.diferencia || 0).toLocaleString() }}).
-      </p>
-
-      <div class="bg-surface-elevated p-4 rounded-xl border border-border space-y-3">
-        <h4 class="font-bold text-xs text-text-primary uppercase tracking-wider">Confirmación del Operador Entrante</h4>
-        <div>
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Efectivo Físico Recibido ($)</label>
-          <input 
-            v-model.number="formRecibir.efectivo"
-            type="number" 
-            placeholder="0"
-            class="input-field text-sm font-bold"
-          />
-        </div>
-        <button @click="confirmarRecepcionTurno" class="btn-primary w-full text-xs py-2.5">
-          Confirmar Recepción e Iniciar Mi Turno
-        </button>
-      </div>
-    </div>
-
-    <!-- MODAL RETIRO / INGRESO MANUAL (HU-24) -->
-    <div v-if="mostrarModalRetiro" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div class="bg-surface rounded-2xl border border-border p-5 max-w-sm w-full shadow-2xl space-y-4">
-        <h3 class="text-base font-bold text-text-primary">Movimiento de Caja</h3>
-        <div class="space-y-3">
+        <form class="max-w-xs mx-auto space-y-3 pt-2 text-left" @submit.prevent="abrirTurno">
           <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Tipo de Movimiento</label>
-            <select v-model="formMovimiento.tipo" class="input-field text-xs">
-              <option value="retiro">Retiro (El dueño retira efectivo)</option>
-              <option value="ingreso_manual">Ingreso Manual (Aporte a la caja)</option>
+            <label class="etiqueta" for="caja-base">Base inicial en efectivo ($)</label>
+            <input id="caja-base" v-model="formAbrir.base" type="number" min="0" step="1" inputmode="numeric" placeholder="0" class="campo text-center font-semibold text-lg num-tabular" />
+          </div>
+          <button type="submit" class="btn-craft-primary w-full text-sm px-4 py-2.5 rounded-lg" :disabled="procesando || !conexion.isOnline">
+            Abrir turno
+          </button>
+          <p v-if="!conexion.isOnline" class="text-2xs text-text-muted text-center">Requiere conexión.</p>
+        </form>
+      </div>
+
+      <!-- TURNO ABIERTO -->
+      <div v-else-if="turno.estado === 'abierto'" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="card-craft pastel-card-mint p-5 space-y-1">
+            <span class="rotulo">Efectivo esperado en caja</span>
+            <p class="text-3xl sm:text-4xl font-semibold tracking-tight text-success num-tabular">{{ pesos(turno.efectivo_esperado) }}</p>
+            <p class="text-xs text-text-secondary">Base inicial: <strong class="font-semibold text-text-primary num-tabular">{{ pesos(turno.base_inicial) }}</strong></p>
+            <p class="text-2xs text-text-muted">Base + cobros y pagos en efectivo + ingresos manuales − retiros</p>
+          </div>
+          <div class="card-craft p-5 space-y-2.5 text-sm text-text-secondary">
+            <div class="flex justify-between gap-2"><span>Responsable</span><strong class="font-semibold text-text-primary truncate">{{ nombreResponsable }}</strong></div>
+            <div class="flex justify-between gap-2"><span>Abierto</span><strong class="font-semibold text-text-primary">{{ fh(turno.abierto_at) }}</strong></div>
+            <div class="flex justify-between gap-2"><span>Entradas del turno</span><strong class="font-semibold text-text-primary num-tabular">{{ resumen?.entradas ?? '—' }}</strong></div>
+            <div class="flex justify-between gap-2"><span>Salidas cobradas</span><strong class="font-semibold text-text-primary num-tabular">{{ resumen?.salidas ?? '—' }}</strong></div>
+            <div class="flex justify-between gap-2"><span>Vehículos dentro</span><strong class="font-semibold text-text-primary num-tabular">{{ totalDentro }}</strong></div>
+          </div>
+        </div>
+
+        <!-- Cobros por método -->
+        <div v-if="resumen" class="card-craft p-5 space-y-4">
+          <h3 class="titulo-seccion">Cobros del turno por método de pago</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
+            <div>
+              <p class="rotulo mb-2">Parqueo por hora</p>
+              <ul class="space-y-1.5">
+                <li v-for="c in resumen.cobros_hora" :key="'h' + c.metodo" class="flex justify-between gap-2">
+                  <span class="text-text-secondary">{{ c.metodo }} <span class="text-text-muted">({{ c.cantidad }})</span> <span v-if="c.es_efectivo" class="badge-pastel-mint px-1.5 py-px rounded-full text-2xs">efectivo</span></span>
+                  <strong class="font-semibold num-tabular">{{ pesos(c.total) }}</strong>
+                </li>
+                <li v-if="!resumen.cobros_hora.length" class="text-text-muted text-xs">Sin cobros todavía.</li>
+              </ul>
+            </div>
+            <div>
+              <p class="rotulo mb-2">Mensualidades</p>
+              <ul class="space-y-1.5">
+                <li v-for="c in resumen.pagos_mensualidad" :key="'m' + c.metodo" class="flex justify-between gap-2">
+                  <span class="text-text-secondary">{{ c.metodo }} <span class="text-text-muted">({{ c.cantidad }})</span> <span v-if="c.es_efectivo" class="badge-pastel-mint px-1.5 py-px rounded-full text-2xs">efectivo</span></span>
+                  <strong class="font-semibold num-tabular">{{ pesos(c.total) }}</strong>
+                </li>
+                <li v-if="!resumen.pagos_mensualidad.length" class="text-text-muted text-xs">Sin pagos todavía.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2 text-sm border-t border-border pt-3">
+            <div class="flex justify-between"><span class="text-text-secondary">Total en efectivo</span><strong class="font-semibold num-tabular">{{ pesos(totalesMetodo.efectivo) }}</strong></div>
+            <div class="flex justify-between"><span class="text-text-secondary">Otros métodos</span><strong class="font-semibold num-tabular">{{ pesos(totalesMetodo.otros) }}</strong></div>
+          </div>
+        </div>
+
+        <!-- Movimientos -->
+        <div class="card-craft p-5 space-y-3">
+          <h3 class="titulo-seccion">Retiros e ingresos manuales</h3>
+          <ul v-if="resumen?.movimientos?.length" class="divide-y divide-border-subtle text-sm">
+            <li v-for="m in resumen.movimientos" :key="m.id" class="flex justify-between gap-2 py-2">
+              <span class="truncate">
+                <span :class="m.tipo === 'retiro' ? 'badge-pastel-rose' : 'badge-pastel-mint'" class="px-1.5 py-px rounded-full text-2xs mr-1">{{ m.tipo === 'retiro' ? 'Retiro' : 'Ingreso' }}</span>
+                {{ m.motivo }} <span class="text-text-muted text-xs">· {{ m.usuario }} · {{ fh(m.created_at) }}</span>
+              </span>
+              <strong class="font-semibold num-tabular shrink-0" :class="m.tipo === 'retiro' ? 'text-danger' : 'text-success'">{{ m.tipo === 'retiro' ? '−' : '+' }}{{ pesos(m.valor) }}</strong>
+            </li>
+          </ul>
+          <p v-else class="text-xs text-text-muted">Sin movimientos en este turno.</p>
+
+          <form class="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-3 border-t border-border" @submit.prevent="registrarMovimiento">
+            <select v-model="formMov.tipo" class="campo" aria-label="Tipo de movimiento">
+              <option value="retiro">Retiro</option>
+              <option value="ingreso_manual">Ingreso manual</option>
             </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Valor ($)</label>
-            <input v-model.number="formMovimiento.valor" type="number" class="input-field text-sm font-bold" placeholder="0" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Motivo Justificado *</label>
-            <input v-model="formMovimiento.motivo" type="text" placeholder="Ej. Retiro del dueño..." class="input-field text-xs" />
-          </div>
+            <input v-model="formMov.valor" type="number" min="1" step="1" inputmode="numeric" placeholder="Valor" class="campo num-tabular" aria-label="Valor" />
+            <input v-model="formMov.motivo" type="text" placeholder="Motivo (obligatorio)" class="campo" aria-label="Motivo" />
+            <button type="submit" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" :disabled="procesando || !conexion.isOnline || !formMov.motivo.trim() || !(parseInt(formMov.valor) > 0)">
+              Registrar
+            </button>
+          </form>
         </div>
 
-        <div class="flex space-x-2 pt-2">
-          <button @click="mostrarModalRetiro = false" class="btn-secondary w-1/3 text-xs">Cancelar</button>
-          <button @click="guardarMovimiento" class="btn-primary w-2/3 text-xs">Registrar Movimiento</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL ENTREGAR TURNO (HU-24) -->
-    <div v-if="mostrarModalEntrega" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div class="bg-surface rounded-2xl border border-border p-5 max-w-sm w-full shadow-2xl space-y-4">
-        <h3 class="text-base font-bold text-text-primary">Entregar Turno</h3>
-        <p class="text-xs text-text-secondary">
-          Efectivo esperado en el sistema: <strong class="text-primary">${{ (turnoActual.efectivo_esperado || 0).toLocaleString() }}</strong>
-        </p>
-
-        <div class="space-y-3">
+        <!-- Entregar turno -->
+        <div class="card-craft p-5 space-y-3">
           <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Efectivo Físico Contado ($) *</label>
-            <input v-model.number="formEntrega.efectivo" type="number" class="input-field text-sm font-bold" placeholder="0" />
+            <h3 class="titulo-seccion">Entregar turno</h3>
+            <p class="text-xs text-text-muted mt-0.5">Cuenta el efectivo físico. Quien te releva lo recibirá en este dispositivo.</p>
           </div>
-          <div v-if="formEntrega.efectivo !== null && formEntrega.efectivo !== undefined">
-            <p class="text-xs font-semibold" :class="diferenciaCalculada >= 0 ? 'text-success' : 'text-danger'">
-              {{ diferenciaCalculada >= 0 ? `Sobrante: +$${diferenciaCalculada.toLocaleString()}` : `Faltante: -$${Math.abs(diferenciaCalculada).toLocaleString()}` }}
-            </p>
+          <VehiculosDentro :lista="resumen?.vehiculos_dentro" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input v-model="formEntrega.contado" type="number" min="0" step="1" inputmode="numeric" placeholder="Efectivo contado" class="campo num-tabular" aria-label="Efectivo contado" />
+            <input v-model="formEntrega.observacion" type="text" placeholder="Observación (opcional)" class="campo" aria-label="Observación" />
           </div>
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-text-secondary">Observación</label>
-            <textarea v-model="formEntrega.observacion" rows="2" class="input-field text-xs" placeholder="Novedades en el turno..."></textarea>
+          <p v-if="formEntrega.contado !== ''" class="text-sm font-semibold" :class="claseDiferencia(diferenciaEntrega)">
+            {{ textoDiferencia(diferenciaEntrega) }} (esperado {{ pesos(turno.efectivo_esperado) }})
+          </p>
+          <div class="flex flex-col sm:flex-row gap-2 pt-1">
+            <button class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="procesando || !conexion.isOnline || formEntrega.contado === ''" @click="entregarTurno">
+              Confirmar entrega
+            </button>
+            <button class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" :disabled="procesando || !conexion.isOnline || formEntrega.contado === ''" @click="pedirCierreSinRelevo">
+              Cerrar sin relevo
+            </button>
           </div>
-        </div>
-
-        <div class="flex space-x-2 pt-2">
-          <button @click="mostrarModalEntrega = false" class="btn-secondary w-1/3 text-xs">Cancelar</button>
-          <button @click="confirmarEntregaTurno" class="btn-primary w-2/3 text-xs">Entregar Turno</button>
         </div>
       </div>
-    </div>
+
+      <!-- TURNO POR RECIBIR -->
+      <div v-else-if="turno.estado === 'por_recibir'" class="space-y-4">
+        <div class="card-craft pastel-card-amber p-5 space-y-2.5 text-sm">
+          <h3 class="titulo-seccion">Turno pendiente por recibir</h3>
+          <div class="flex justify-between gap-2"><span class="text-text-secondary">Entregado por</span><strong class="font-semibold">{{ nombreResponsable }}</strong></div>
+          <div class="flex justify-between gap-2"><span class="text-text-secondary">Entregado</span><strong class="font-semibold">{{ fh(turno.cerrado_at) }}</strong></div>
+          <div class="flex justify-between gap-2"><span class="text-text-secondary">Efectivo esperado</span><strong class="font-semibold num-tabular">{{ pesos(turno.efectivo_esperado) }}</strong></div>
+          <div class="flex justify-between gap-2"><span class="text-text-secondary">Efectivo contado por quien entrega</span><strong class="font-semibold num-tabular">{{ pesos(turno.efectivo_contado) }}</strong></div>
+          <div class="flex justify-between gap-2"><span class="text-text-secondary">Diferencia al entregar</span><strong class="font-semibold" :class="claseDiferencia(turno.diferencia)">{{ textoDiferencia(turno.diferencia) }}</strong></div>
+          <p v-if="turno.observacion" class="text-text-secondary text-xs pt-1">Observación: {{ turno.observacion }}</p>
+        </div>
+
+        <div class="card-craft p-5 space-y-3">
+          <div>
+            <h3 class="titulo-seccion">Recibir turno</h3>
+            <p class="text-xs text-text-muted mt-0.5">Cuenta el efectivo y confirma los vehículos que recibes. Se abrirá tu turno con el efectivo recibido como base.</p>
+          </div>
+          <VehiculosDentro :lista="resumen?.vehiculos_dentro" />
+          <input v-model="formRecibir.recibido" type="number" min="0" step="1" inputmode="numeric" placeholder="Efectivo recibido" class="campo num-tabular" aria-label="Efectivo recibido" />
+          <p v-if="formRecibir.recibido !== ''" class="text-sm font-semibold" :class="claseDiferencia(diferenciaRecepcion)">
+            Frente a lo contado al entregar: {{ textoDiferencia(diferenciaRecepcion) }}
+          </p>
+          <label class="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none">
+            <input v-model="formRecibir.vehiculosOk" type="checkbox" class="rounded" />
+            Confirmo que recibo {{ totalDentro }} vehículo(s) dentro
+          </label>
+          <div class="flex flex-col sm:flex-row gap-2 pt-1">
+            <button class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="procesando || !conexion.isOnline || formRecibir.recibido === '' || !formRecibir.vehiculosOk" @click="recibirTurno">
+              Recibir y abrir mi turno
+            </button>
+            <button class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" :disabled="procesando || !conexion.isOnline" @click="pedirCierreSinRelevo">
+              Cerrar sin relevo
+            </button>
+          </div>
+          <p v-if="ultimaRecepcion !== null" class="text-sm font-semibold" :class="claseDiferencia(ultimaRecepcion)">
+            Diferencia registrada en la recepción: {{ textoDiferencia(ultimaRecepcion) }}
+          </p>
+        </div>
+      </div>
     </template>
+
+    <!-- Confirmación de cierre sin relevo -->
+    <div v-if="confirmarCierre" class="modal-fondo" @click.self="confirmarCierre = false">
+      <div class="modal-panel max-w-md" role="dialog" aria-modal="true">
+        <div class="modal-encabezado">
+          <h3 class="modal-titulo">¿Cerrar el turno sin relevo?</h3>
+          <button type="button" class="btn-icono" aria-label="Cerrar" @click="confirmarCierre = false">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <p class="text-sm text-text-secondary">El turno quedará cerrado y el siguiente deberá abrirse indicando una base. Úsalo cuando el parqueadero cierra o nadie recibe la caja.</p>
+        <input v-if="turno?.estado === 'por_recibir'" v-model="formCierre.contado" type="number" min="0" step="1" placeholder="Efectivo contado (opcional, se usa el de la entrega)" class="campo num-tabular" aria-label="Efectivo contado" />
+        <input v-model="formCierre.observacion" type="text" placeholder="Observación" class="campo" aria-label="Observación" />
+        <div class="flex gap-2 justify-end pt-1">
+          <button class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" @click="confirmarCierre = false">Cancelar</button>
+          <button class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="procesando" @click="cerrarSinRelevo">Cerrar turno</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated, onBeforeUnmount, h } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useConexionStore } from '@/stores/conexion'
 import { cajaService } from '@/modules/caja/services/cajaService'
+import { mensajeDeError } from '@/lib/sesionCaches'
+import { formatearFechaHora } from '@/utils/fecha'
 
 const authStore = useAuthStore()
+const conexion = useConexionStore()
+
+const claseInput = 'campo'
+
+const VehiculosDentro = (props) => {
+  const lista = props.lista || []
+  if (!lista.length) return h('p', { class: 'text-xs text-text-muted' }, 'No quedan vehículos dentro.')
+  return h('div', { class: 'flex flex-wrap gap-2' }, lista.map(v =>
+    h('span', { class: 'badge-pastel-blue px-2 py-0.5 rounded-full text-2xs font-semibold' }, `${v.tipo}: ${v.cantidad}`)))
+}
+VehiculosDentro.props = ['lista']
 
 const cargando = ref(true)
-const turnoActual = ref(null)
-const mensajeExito = ref('')
+const procesando = ref(false)
+const turno = ref(null)
+const resumen = ref(null)
 const errorMensaje = ref('')
+const mensajeExito = ref('')
+const confirmarCierre = ref(false)
+const ultimaRecepcion = ref(null)
 
-const mostrarModalRetiro = ref(false)
-const mostrarModalEntrega = ref(false)
+const formAbrir = ref({ base: '' })
+const formMov = ref({ tipo: 'retiro', valor: '', motivo: '' })
+const formEntrega = ref({ contado: '', observacion: '' })
+const formRecibir = ref({ recibido: '', vehiculosOk: false })
+const formCierre = ref({ contado: '', observacion: '' })
 
-const formAbrir = ref({ base: 50000 })
-const formMovimiento = ref({ tipo: 'retiro', valor: 0, motivo: '' })
-const formEntrega = ref({ efectivo: 0, observacion: '' })
-const formRecibir = ref({ efectivo: 0 })
+let cancelarSuscripcion = null
 
-const diferenciaCalculada = computed(() => {
-  return (formEntrega.value.efectivo || 0) - (turnoActual.value?.efectivo_esperado || 0)
-})
-
-function formatearHora(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+function pesos(v) {
+  return `$${Number(v || 0).toLocaleString('es-CO')}`
+}
+function fh(v) {
+  return v ? formatearFechaHora(v, authStore.zonaHoraria) : '—'
+}
+function textoDiferencia(d) {
+  const n = Number(d || 0)
+  if (n === 0) return 'Cuadra exacto'
+  return n > 0 ? `Sobrante ${pesos(n)}` : `Faltante ${pesos(-n)}`
+}
+function claseDiferencia(d) {
+  const n = Number(d || 0)
+  return n === 0 ? 'text-success' : n > 0 ? 'text-warning' : 'text-danger'
 }
 
-async function cargarTurno() {
-  const pqId = authStore.parqueaderoId
-  const cached = cajaService.obtenerTurnoCache()
-  
-  if (cached) {
-    turnoActual.value = cached
-    formRecibir.value.efectivo = cached.efectivo_contado || cached.efectivo_esperado || 0
-    formEntrega.value.efectivo = cached.efectivo_esperado || 0
+const nombreResponsable = computed(() => turno.value?.profiles?.nombre || resumen.value?.turno?.usuario_nombre || '—')
+const totalDentro = computed(() => (resumen.value?.vehiculos_dentro || []).reduce((s, v) => s + v.cantidad, 0))
+const diferenciaEntrega = computed(() => parseInt(formEntrega.value.contado || 0, 10) - (turno.value?.efectivo_esperado || 0))
+const diferenciaRecepcion = computed(() => parseInt(formRecibir.value.recibido || 0, 10) - (turno.value?.efectivo_contado || 0))
+const totalesMetodo = computed(() => {
+  const todos = [...(resumen.value?.cobros_hora || []), ...(resumen.value?.pagos_mensualidad || [])]
+  return {
+    efectivo: todos.filter(c => c.es_efectivo).reduce((s, c) => s + Number(c.total), 0),
+    otros: todos.filter(c => !c.es_efectivo).reduce((s, c) => s + Number(c.total), 0)
+  }
+})
+
+function avisar(texto) {
+  mensajeExito.value = texto
+  errorMensaje.value = ''
+  setTimeout(() => { if (mensajeExito.value === texto) mensajeExito.value = '' }, 4000)
+}
+
+async function cargar({ silencioso = false } = {}) {
+  const pq = authStore.parqueaderoId
+  if (!pq) return
+  const cache = cajaService.obtenerTurnoCache()
+  if (cache !== undefined) {
+    turno.value = cache
     cargando.value = false
-  } else {
+  } else if (!silencioso) {
     cargando.value = true
   }
-
   try {
-    const fresh = await cajaService.obtenerTurnoActual(pqId)
-    turnoActual.value = fresh
-    if (turnoActual.value) {
-      formRecibir.value.efectivo = turnoActual.value.efectivo_contado || turnoActual.value.efectivo_esperado || 0
-      formEntrega.value.efectivo = turnoActual.value.efectivo_esperado || 0
-    }
-  } catch (err) {
-    console.warn(err)
+    turno.value = await cajaService.obtenerTurnoActual(pq)
+    resumen.value = turno.value && conexion.isOnline ? await cajaService.obtenerResumen(turno.value.id) : null
+    if (resumen.value?.turno) turno.value = { ...turno.value, ...resumen.value.turno, profiles: turno.value.profiles }
+  } catch (e) {
+    errorMensaje.value = mensajeDeError(e, 'No se pudo consultar la caja')
   } finally {
     cargando.value = false
   }
 }
 
-async function abrirNuevoTurno() {
+async function ejecutar(fn, exito) {
+  procesando.value = true
   errorMensaje.value = ''
   try {
-    await cajaService.abrirTurno(formAbrir.value.base)
-    mensajeExito.value = 'Turno de caja abierto correctamente'
-    await cargarTurno()
-  } catch (err) {
-    errorMensaje.value = err.message || 'Error al abrir turno'
+    const r = await fn()
+    avisar(exito)
+    await cargar({ silencioso: true })
+    return r
+  } catch (e) {
+    errorMensaje.value = mensajeDeError(e)
+    return null
+  } finally {
+    procesando.value = false
   }
 }
 
-async function guardarMovimiento() {
-  if (!formMovimiento.value.valor || !formMovimiento.value.motivo) {
-    return alert('Indica el valor y el motivo')
+async function abrirTurno() {
+  const base = formAbrir.value.base === '' ? 0 : parseInt(formAbrir.value.base, 10)
+  if (Number.isNaN(base) || base < 0) {
+    errorMensaje.value = 'La base debe ser 0 o mayor'
+    return
   }
-  try {
-    await cajaService.registrarMovimiento(
-      turnoActual.value.id,
-      formMovimiento.value.tipo,
-      formMovimiento.value.valor,
-      formMovimiento.value.motivo
-    )
-    mostrarModalRetiro.value = false
-    formMovimiento.value = { tipo: 'retiro', valor: 0, motivo: '' }
-    mensajeExito.value = 'Movimiento registrado correctamente'
-    await cargarTurno()
-  } catch (err) {
-    errorMensaje.value = err.message || 'Error al registrar movimiento'
+  const r = await ejecutar(() => cajaService.abrirTurno(base), 'Turno abierto')
+  if (r) formAbrir.value.base = ''
+}
+
+async function registrarMovimiento() {
+  const r = await ejecutar(
+    () => cajaService.registrarMovimiento(turno.value.id, formMov.value.tipo, formMov.value.valor, formMov.value.motivo),
+    formMov.value.tipo === 'retiro' ? 'Retiro registrado' : 'Ingreso registrado'
+  )
+  if (r) formMov.value = { tipo: formMov.value.tipo, valor: '', motivo: '' }
+}
+
+async function entregarTurno() {
+  const r = await ejecutar(
+    () => cajaService.entregarTurno(turno.value.id, formEntrega.value.contado, formEntrega.value.observacion),
+    'Turno entregado. Quien te releva debe recibirlo.'
+  )
+  if (r) formEntrega.value = { contado: '', observacion: '' }
+}
+
+async function recibirTurno() {
+  const r = await ejecutar(
+    () => cajaService.recibirTurno(turno.value.id, formRecibir.value.recibido),
+    'Turno recibido. Tu turno quedó abierto.'
+  )
+  if (r) {
+    ultimaRecepcion.value = r.diferencia_recepcion ?? null
+    formRecibir.value = { recibido: '', vehiculosOk: false }
   }
 }
 
-async function confirmarEntregaTurno() {
-  try {
-    await cajaService.entregarTurno(
-      turnoActual.value.id,
-      formEntrega.value.efectivo,
-      formEntrega.value.observacion
-    )
-    mostrarModalEntrega.value = false
-    mensajeExito.value = 'Turno entregado, listo para recepción del relevo'
-    await cargarTurno()
-  } catch (err) {
-    errorMensaje.value = err.message || 'Error al entregar turno'
-  }
+function pedirCierreSinRelevo() {
+  formCierre.value = { contado: turno.value?.estado === 'abierto' ? formEntrega.value.contado : '', observacion: formEntrega.value.observacion || '' }
+  confirmarCierre.value = true
 }
 
-async function confirmarRecepcionTurno() {
-  try {
-    await cajaService.recibirTurno(turnoActual.value.id, formRecibir.value.efectivo)
-    mensajeExito.value = 'Turno recibido con éxito. Nuevo turno iniciado.'
-    await cargarTurno()
-  } catch (err) {
-    errorMensaje.value = err.message || 'Error al recibir turno'
+async function cerrarSinRelevo() {
+  const contado = formCierre.value.contado === '' ? null : formCierre.value.contado
+  const r = await ejecutar(
+    () => cajaService.cerrarSinRelevo(turno.value.id, contado, formCierre.value.observacion),
+    'Turno cerrado sin relevo'
+  )
+  if (r) {
+    confirmarCierre.value = false
+    formEntrega.value = { contado: '', observacion: '' }
   }
 }
 
 onMounted(() => {
-  cargarTurno()
+  cargar()
+  cancelarSuscripcion = cajaService.suscribirCambios(authStore.parqueaderoId, () => cargar({ silencioso: true }))
 })
+// Con <keep-alive> onActivated también corre tras el primer montaje: se omite esa vez
+let primeraActivacion = true
+onActivated(() => {
+  if (primeraActivacion) { primeraActivacion = false; return }
+  cargar({ silencioso: true })
+})
+onBeforeUnmount(() => cancelarSuscripcion?.())
 </script>
-
-<style scoped>
-.input-field {
-  @apply w-full px-3 py-2 text-sm rounded-lg bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary transition-colors;
-}
-
-.btn-primary {
-  @apply px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm;
-}
-
-.btn-secondary {
-  @apply px-3 py-1.5 rounded-lg border border-border bg-surface text-text-primary hover:bg-surface-elevated transition-colors font-medium;
-}
-</style>

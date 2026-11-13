@@ -2,259 +2,402 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Inter (variable, solo latín: cubre tildes y ñ). Se empaqueta con la app,
+   así que funciona sin conexión (el service worker precachea los .woff2). */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+/* ------------------------------------------------------------------
+   Tokens de diseño. Tailwind los mapea en tailwind.config.js.
+   Paleta sobria: neutros fríos, un azul de marca y colores de estado.
+   ------------------------------------------------------------------ */
 :root {
-  /* Tema Claro: Nordic Mobility & Warm Pastel Atelier */
-  --color-bg: #f5f7fa;
+  --color-bg: #f5f6f8;
   --color-surface: #ffffff;
-  --color-surface-elevated: #f8fafc;
-  --color-border: #e6ebf1;
-  --color-border-subtle: #edf2f7;
-  
-  --color-text-primary: #1e293b;
-  --color-text-secondary: #475569;
-  --color-text-muted: #8392a5;
-  
-  --color-primary: #1e3a8a;
-  --color-primary-hover: #2563eb;
-  --color-primary-active: #1d4ed8;
+  --color-surface-elevated: #f8f9fb;
+  --color-border: #e3e6eb;
+  --color-border-subtle: #eef0f3;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475467;
+  --color-text-muted: #6b7486;
+
+  --color-primary: #1d4ed8;
+  --color-primary-hover: #1e40af;
+  --color-primary-active: #1e3a8a;
   --color-primary-text: #ffffff;
-  
-  /* Pasteles suaves con vida temática de parqueadero */
-  --color-success: #059669;
+
+  --color-success: #047857;
   --color-success-bg: #ecfdf5;
   --color-success-border: #a7f3d0;
-  
-  --color-warning: #d97706;
+
+  --color-warning: #b45309;
   --color-warning-bg: #fffbeb;
-  --color-warning-border: #fde68a;
-  
-  --color-danger: #e11d48;
+  --color-warning-border: #fcd34d;
+
+  --color-danger: #be123c;
   --color-danger-bg: #fff1f2;
   --color-danger-border: #fecdd3;
 
-  --color-info-bg: #f0f9ff;
-  --color-info-border: #bae6fd;
-  --color-info-text: #0369a1;
+  --color-info-bg: #eff6ff;
+  --color-info-border: #bfdbfe;
+  --color-info-text: #1d4ed8;
+
+  --sombra-tarjeta: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --sombra-flotante: 0 12px 32px -8px rgba(16, 24, 40, 0.18), 0 4px 8px -4px rgba(16, 24, 40, 0.08);
+
+  color-scheme: light;
 }
 
 .dark {
-  /* Tema Oscuro: Deep Twilight Slate con acentos pastel cálidos */
-  --color-bg: #0d131f;
-  --color-surface: #141c2c;
-  --color-surface-elevated: #1a253a;
-  --color-border: #212f47;
-  --color-border-subtle: #192335;
-  
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
-  
+  --color-bg: #0a0f1a;
+  --color-surface: #111827;
+  --color-surface-elevated: #172032;
+  --color-border: #233047;
+  --color-border-subtle: #1a2436;
+
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #a3b0c2;
+  --color-text-muted: #7d8aa0;
+
   --color-primary: #3b82f6;
   --color-primary-hover: #60a5fa;
   --color-primary-active: #2563eb;
   --color-primary-text: #ffffff;
-  
-  --color-success: #10b981;
-  --color-success-bg: #064e3b33;
+
+  --color-success: #34d399;
+  --color-success-bg: #064e3b40;
   --color-success-border: #05966966;
-  
-  --color-warning: #f59e0b;
-  --color-warning-bg: #451a0333;
+
+  --color-warning: #fbbf24;
+  --color-warning-bg: #451a0340;
   --color-warning-border: #d9770666;
-  
-  --color-danger: #f43f5e;
-  --color-danger-bg: #4c051933;
+
+  --color-danger: #fb7185;
+  --color-danger-bg: #4c051940;
   --color-danger-border: #e11d4866;
 
-  --color-info-bg: #082f4944;
-  --color-info-border: #0284c766;
-  --color-info-text: #38bdf8;
+  --color-info-bg: #1e3a8a33;
+  --color-info-border: #3b82f666;
+  --color-info-text: #93c5fd;
+
+  --sombra-tarjeta: none;
+  --sombra-flotante: 0 16px 40px -8px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
 }
 
-/* Placa vehicular auténtica estilo colombiano con relieve y bisel */
+/* ------------------------------------------------------------------
+   Base
+   ------------------------------------------------------------------ */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-feature-settings: 'cv11', 'ss01';
+    background-color: var(--color-bg);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--color-primary);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Componentes (en @layer components: las utilidades de Tailwind en la
+   vista, como rounded-xl o px-3, siguen pudiendo ajustarlos)
+   ------------------------------------------------------------------ */
+@layer components {
+  /* Tarjeta base */
+  .card-craft {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.875rem;
+    box-shadow: var(--sombra-tarjeta);
+    position: relative;
+  }
+
+  /* Tarjeta que es un botón o enlace */
+  .card-interactiva {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+  }
+  .card-interactiva:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+  }
+
+  /* Encabezado de página */
+  .titulo-pagina {
+    @apply text-xl md:text-2xl font-semibold tracking-tight text-text-primary;
+  }
+  .subtitulo-pagina {
+    @apply text-sm text-text-secondary mt-0.5;
+  }
+  /* Título de sección dentro de una tarjeta */
+  .titulo-seccion {
+    @apply text-sm font-semibold text-text-primary;
+  }
+  /* Rótulo pequeño en mayúsculas (KPIs, columnas) */
+  .rotulo {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    @apply font-semibold uppercase tracking-wider text-text-muted;
+  }
+
+  /* Formularios */
+  .etiqueta {
+    @apply block text-xs font-medium text-text-secondary mb-1.5;
+  }
+  .campo {
+    @apply w-full px-3 py-2 text-sm rounded-lg bg-surface border border-border text-text-primary
+      placeholder:text-text-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+  .campo-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+
+  /* Botones */
+  .btn-craft-primary,
+  .btn-craft-success,
+  .btn-craft-subtle,
+  .btn-craft-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn-craft-primary:disabled,
+  .btn-craft-success:disabled,
+  .btn-craft-subtle:disabled,
+  .btn-craft-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-craft-primary {
+    background-color: var(--color-primary);
+    color: var(--color-primary-text);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1);
+  }
+  .btn-craft-primary:hover:not(:disabled) {
+    background-color: var(--color-primary-hover);
+  }
+  .btn-craft-primary:active:not(:disabled) {
+    background-color: var(--color-primary-active);
+  }
+  .dark .btn-craft-primary:hover:not(:disabled) {
+    background-color: var(--color-primary-active);
+  }
+
+  .btn-craft-success {
+    background-color: #047857;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1);
+  }
+  .btn-craft-success:hover:not(:disabled) {
+    background-color: #065f46;
+  }
+
+  .btn-craft-danger {
+    background-color: #be123c;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1);
+  }
+  .btn-craft-danger:hover:not(:disabled) {
+    background-color: #9f1239;
+  }
+
+  .btn-craft-subtle {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .btn-craft-subtle:hover:not(:disabled) {
+    background-color: var(--color-surface-elevated);
+    border-color: color-mix(in srgb, var(--color-text-muted) 45%, var(--color-border));
+  }
+
+  /* Botón de solo ícono (cerrar modal, etc.) */
+  .btn-icono {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-lg text-text-muted
+      hover:bg-surface-elevated hover:text-text-primary transition-colors;
+  }
+
+  /* Modales */
+  .modal-fondo {
+    @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/50 backdrop-blur-[2px];
+  }
+  .modal-panel {
+    @apply w-full bg-surface border border-border rounded-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto;
+    box-shadow: var(--sombra-flotante);
+  }
+  .modal-encabezado {
+    @apply flex items-center justify-between gap-3 pb-3 border-b border-border;
+  }
+  .modal-titulo {
+    @apply text-base font-semibold text-text-primary;
+  }
+
+  /* Avisos en línea */
+  .alerta {
+    @apply flex items-start gap-2 p-3 rounded-lg border text-xs font-medium;
+  }
+  .alerta-exito { @apply alerta bg-success-bg text-success border-success-border; }
+  .alerta-error { @apply alerta bg-danger-bg text-danger border-danger-border; }
+  .alerta-aviso { @apply alerta bg-warning-bg text-warning border-warning-border; }
+  .alerta-info { @apply alerta bg-info-bg text-info-text border-info-border; }
+
+  /* Tablas */
+  .tabla {
+    @apply w-full text-left text-sm;
+  }
+  .tabla thead th {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    @apply px-4 py-2.5 font-semibold uppercase tracking-wider text-text-muted bg-surface-elevated border-b border-border;
+  }
+  .tabla tbody td {
+    @apply px-4 py-3 border-b border-border-subtle align-middle;
+  }
+  .tabla tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .tabla tbody tr:hover td {
+    background-color: color-mix(in srgb, var(--color-surface-elevated) 70%, transparent);
+  }
+
+  /* Estado vacío */
+  .vacio {
+    @apply flex flex-col items-center justify-center text-center py-10 px-4 text-sm text-text-muted gap-2;
+  }
+
+  /* Indicador de carga */
+  .spinner {
+    @apply w-6 h-6 rounded-full border-2 border-border border-t-primary animate-spin;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Placa vehicular colombiana
+   ------------------------------------------------------------------ */
 .plate-colombia {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  letter-spacing: 0.14em;
-  font-weight: 900;
+  letter-spacing: 0.12em;
+  font-weight: 800;
   text-transform: uppercase;
-  border-radius: 0.45rem;
-  padding: 0.22rem 0.65rem;
+  border-radius: 0.375rem;
+  padding: 0.2rem 0.6rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   user-select: all;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 2px rgba(0, 0, 0, 0.12);
   line-height: 1.15;
 }
 
-.plate-carro {
-  background: linear-gradient(180deg, #fef08a 0%, #facc15 65%, #eab308 100%);
-  color: #0f172a;
-  border: 2px solid #1e293b;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
+.plate-carro,
 .plate-moto {
-  background: linear-gradient(180deg, #fef08a 0%, #eab308 100%);
-  color: #0f172a;
-  border: 2px solid #1e293b;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: #fcd116;
+  color: #111827;
+  border: 2px solid #111827;
 }
 
 .plate-bici {
-  background: linear-gradient(180deg, #dcfce7 0%, #86efac 100%);
+  background: #dcfce7;
   color: #064e3b;
   border: 2px solid #15803d;
 }
 
-/* Tarjeta con relieve suave, sombras difusas y estética artesanal */
-.card-craft {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 1.125rem;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 8px 24px -4px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-}
-
-.card-craft:hover {
-  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.04);
-}
-
-.dark .card-craft {
-  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-}
-
-/* Tarjetas temáticas con fondos pasteles suaves */
-.pastel-card-mint {
-  background: linear-gradient(145deg, #f0fdf4 0%, #ffffff 80%);
-  border: 1px solid #bbf7d0;
-}
-.dark .pastel-card-mint {
-  background: linear-gradient(145deg, rgba(6, 78, 59, 0.25) 0%, rgba(20, 28, 44, 0.9) 100%);
-  border: 1px solid rgba(5, 150, 105, 0.3);
-}
-
-.pastel-card-amber {
-  background: linear-gradient(145deg, #fffbeb 0%, #ffffff 80%);
-  border: 1px solid #fde68a;
-}
-.dark .pastel-card-amber {
-  background: linear-gradient(145deg, rgba(69, 26, 3, 0.25) 0%, rgba(20, 28, 44, 0.9) 100%);
-  border: 1px solid rgba(217, 119, 6, 0.3);
-}
-
-.pastel-card-rose {
-  background: linear-gradient(145deg, #fff1f2 0%, #ffffff 80%);
-  border: 1px solid #fecdd3;
-}
-.dark .pastel-card-rose {
-  background: linear-gradient(145deg, rgba(76, 5, 25, 0.25) 0%, rgba(20, 28, 44, 0.9) 100%);
-  border: 1px solid rgba(225, 29, 72, 0.3);
-}
-
-.pastel-card-sky {
-  background: linear-gradient(145deg, #f0f9ff 0%, #ffffff 80%);
-  border: 1px solid #bae6fd;
-}
-.dark .pastel-card-sky {
-  background: linear-gradient(145deg, rgba(8, 47, 73, 0.3) 0%, rgba(20, 28, 44, 0.9) 100%);
-  border: 1px solid rgba(2, 132, 199, 0.3);
-}
-
+/* ------------------------------------------------------------------
+   Tarjetas con tinte de estado (resúmenes, semáforo)
+   ------------------------------------------------------------------ */
+.pastel-card-mint,
+.pastel-card-amber,
+.pastel-card-rose,
+.pastel-card-sky,
 .pastel-card-purple {
-  background: linear-gradient(145deg, #faf5ff 0%, #ffffff 80%);
-  border: 1px solid #e9d5ff;
+  background-color: color-mix(in srgb, var(--tinte) 6%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--tinte) 28%, var(--color-border));
 }
-.dark .pastel-card-purple {
-  background: linear-gradient(145deg, rgba(59, 7, 100, 0.25) 0%, rgba(20, 28, 44, 0.9) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+.pastel-card-mint { --tinte: #10b981; }
+.pastel-card-amber { --tinte: #f59e0b; }
+.pastel-card-rose { --tinte: #f43f5e; }
+.pastel-card-sky { --tinte: #3b82f6; }
+.pastel-card-purple { --tinte: #8b5cf6; }
+
+/* Píldoras de estado */
+.badge-pastel-mint,
+.badge-pastel-amber,
+.badge-pastel-rose,
+.badge-pastel-blue,
+.badge-neutro {
+  border: 1px solid transparent;
+  font-weight: 600;
 }
 
-/* Píldoras pasteles de estado con brillo sutil */
 .badge-pastel-mint {
   background-color: var(--color-success-bg);
   color: var(--color-success);
-  border: 1px solid var(--color-success-border);
+  border-color: var(--color-success-border);
 }
 
 .badge-pastel-amber {
   background-color: var(--color-warning-bg);
   color: var(--color-warning);
-  border: 1px solid var(--color-warning-border);
+  border-color: var(--color-warning-border);
 }
 
 .badge-pastel-rose {
   background-color: var(--color-danger-bg);
   color: var(--color-danger);
-  border: 1px solid var(--color-danger-border);
+  border-color: var(--color-danger-border);
 }
 
 .badge-pastel-blue {
   background-color: var(--color-info-bg);
   color: var(--color-info-text);
-  border: 1px solid var(--color-info-border);
+  border-color: var(--color-info-border);
 }
 
-/* Botones con profundidad y microinteracciones táctiles */
-.btn-craft-primary {
-  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  font-weight: 700;
-  transition: all 0.18s ease;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.btn-craft-primary:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
-  box-shadow: 0 6px 20px 0 rgba(37, 99, 235, 0.42);
-  transform: translateY(-1px);
-}
-
-.btn-craft-primary:active {
-  transform: translateY(1px);
-  box-shadow: 0 2px 8px 0 rgba(37, 99, 235, 0.25);
-}
-
-.btn-craft-success {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-  font-weight: 700;
-  transition: all 0.18s ease;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.btn-craft-success:hover {
-  background: linear-gradient(135deg, #047857 0%, #059669 100%);
-  box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.42);
-  transform: translateY(-1px);
-}
-
-.btn-craft-success:active {
-  transform: translateY(1px);
-  box-shadow: 0 2px 8px 0 rgba(16, 185, 129, 0.25);
-}
-
-.btn-craft-subtle {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  font-weight: 600;
-  transition: all 0.18s ease;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-.btn-craft-subtle:hover {
+.badge-neutro {
   background-color: var(--color-surface-elevated);
-  border-color: rgba(148, 163, 184, 0.6);
-  transform: translateY(-1px);
-}
-
-.btn-craft-subtle:active {
-  transform: translateY(1px);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 /* Tabular nums para que los números no bailen */

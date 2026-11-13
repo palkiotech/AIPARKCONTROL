@@ -1,63 +1,95 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService } from '@/modules/auth/services/authService'
-import { supabase } from '@/lib/supabase'
+import { limpiarCachesDeSesion } from '@/lib/sesionCaches'
+import { borrarReferencias } from '@/offline/referencia'
 
 export const useAuthStore = defineStore('auth', () => {
   const session = ref(null)
   const profile = ref(null)
   const parqueadero = ref(null)
   const loading = ref(true)
+  const motivoSalida = ref('')
+  let inicializado = false
 
-  const isAuthenticated = computed(() => !!session.value)
-  const userRole = computed(() => profile.value?.rol || 'operador')
+  const isAuthenticated = computed(() => !!session.value && !!profile.value)
+  const userRole = computed(() => profile.value?.rol || null)
+  const userName = computed(() => profile.value?.nombre || '')
   const parqueaderoId = computed(() => profile.value?.parqueadero_id || null)
+  const zonaHoraria = computed(() => parqueadero.value?.zona_horaria || 'America/Bogota')
+  const diasAviso = computed(() => parqueadero.value?.dias_aviso_vencimiento ?? 5)
   const isSuperadmin = computed(() => userRole.value === 'superadmin')
-  const isAdmin = computed(() => userRole.value === 'admin' || isSuperadmin.value)
+  const isAdmin = computed(() => userRole.value === 'admin')
   const isOperador = computed(() => userRole.value === 'operador')
+  const rolLegible = computed(() => ({
+    superadmin: 'Superadmin',
+    admin: 'Administrador',
+    operador: 'Operador'
+  }[userRole.value] || ''))
+
+  function aplicarPerfil(perfilData) {
+    profile.value = perfilData?.usuario || null
+    parqueadero.value = perfilData?.parqueadero || null
+  }
+
+  function limpiarEstado() {
+    session.value = null
+    profile.value = null
+    parqueadero.value = null
+    limpiarCachesDeSesion()
+  }
 
   /**
-   * Inicializa la sesión y recupera perfil
+   * Inicializa la sesión. La fuente de verdad es la sesión de Supabase:
+   * sin sesión no se entra, aunque haya un perfil en caché. Con red, el perfil
+   * se valida contra el servidor (usuario activo, parqueadero no suspendido).
+   * Sin red, se usa el perfil en caché para no detener la operación (HU-02/HU-26).
    */
   async function inicializarSesion() {
+    if (inicializado) return
     loading.value = true
     try {
-      // 1. Intentar sesión local en caché (para demo u offline)
-      const cached = authService.obtenerPerfilCacheado()
-      if (cached && cached.activo) {
-        profile.value = cached.usuario
-        parqueadero.value = cached.parqueadero
-        session.value = { user: { id: cached.usuario.id } }
-        loading.value = false
+      const actual = await authService.obtenerSesion()
+      if (!actual) {
+        authService.borrarPerfilCacheado()
+        limpiarEstado()
         return
       }
-
-      // 2. Si no hay caché, consultar Supabase Auth
-      const { data: { session: currentSession } } = await supabase.auth.getSession()
-      if (currentSession) {
-        session.value = currentSession
-        const perfilData = await authService.cargarMiPerfil()
-        if (perfilData?.activo) {
-          profile.value = perfilData.usuario
-          parqueadero.value = perfilData.parqueadero
-        } else {
-          await logout()
-        }
+      session.value = actual
+      const perfilData = await authService.cargarMiPerfil()
+      if (perfilData?.activo) {
+        aplicarPerfil(perfilData)
+      } else {
+        motivoSalida.value = perfilData?.motivo || ''
+        await logout()
       }
     } catch (e) {
       console.warn('Error inicializando sesión:', e)
+      limpiarEstado()
     } finally {
+      inicializado = true
       loading.value = false
     }
+
+    authService.onCambioSesion((evento, nuevaSesion) => {
+      if (evento === 'SIGNED_OUT') {
+        if (profile.value) motivoSalida.value = motivoSalida.value || 'Tu sesión expiró. Inicia sesión de nuevo.'
+        limpiarEstado()
+      } else if (nuevaSesion) {
+        session.value = nuevaSesion
+      }
+    })
   }
 
   async function login(email, password) {
     loading.value = true
+    motivoSalida.value = ''
     try {
+      limpiarCachesDeSesion()
       const result = await authService.login(email, password)
       session.value = result.session
-      profile.value = result.perfil.usuario
-      parqueadero.value = result.perfil.parqueadero
+      aplicarPerfil(result.perfil)
+      inicializado = true
       return result
     } finally {
       loading.value = false
@@ -65,39 +97,28 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Acceso rápido de demostración para exploración local
+   * Revalida el perfil contra el servidor (p. ej. al volver la conexión o tras
+   * editar los datos del negocio en Ajustes).
    */
-  function entrarComoDemo(rol = 'admin') {
-    const perfilesDemo = {
-      superadmin: {
-        activo: true,
-        usuario: { id: 'demo-superadmin', nombre: 'Alejandro (Superadmin)', rol: 'superadmin', parqueadero_id: null },
-        parqueadero: null
-      },
-      admin: {
-        activo: true,
-        usuario: { id: 'demo-admin', nombre: 'Alejandro (Dueño)', rol: 'admin', parqueadero_id: 'pq-demo-001' },
-        parqueadero: { id: 'pq-demo-001', nombre: 'Parqueadero Central', nit: '900.123.456-7', estado: 'activo' }
-      },
-      operador: {
-        activo: true,
-        usuario: { id: 'demo-operador', nombre: 'Juan (Portero)', rol: 'operador', parqueadero_id: 'pq-demo-001' },
-        parqueadero: { id: 'pq-demo-001', nombre: 'Parqueadero Central', nit: '900.123.456-7', estado: 'activo' }
+  async function refrescarPerfil() {
+    if (!session.value) return
+    try {
+      const perfilData = await authService.cargarMiPerfil()
+      if (perfilData?.activo) {
+        aplicarPerfil(perfilData)
+      } else if (perfilData) {
+        motivoSalida.value = perfilData.motivo || ''
+        await logout()
       }
+    } catch (e) {
+      console.warn('No se pudo refrescar el perfil:', e)
     }
-
-    const elegido = perfilesDemo[rol] || perfilesDemo.admin
-    session.value = { user: { id: elegido.usuario.id, email: `${rol}@parkcontrol.com` } }
-    profile.value = elegido.usuario
-    parqueadero.value = elegido.parqueadero
-    authService.guardarPerfilCacheado(elegido)
   }
 
   async function logout() {
     await authService.logout()
-    session.value = null
-    profile.value = null
-    parqueadero.value = null
+    await borrarReferencias()
+    limpiarEstado()
   }
 
   return {
@@ -105,15 +126,20 @@ export const useAuthStore = defineStore('auth', () => {
     profile,
     parqueadero,
     loading,
+    motivoSalida,
     isAuthenticated,
     userRole,
+    userName,
+    rolLegible,
     parqueaderoId,
+    zonaHoraria,
+    diasAviso,
     isSuperadmin,
     isAdmin,
     isOperador,
     inicializarSesion,
     login,
-    entrarComoDemo,
+    refrescarPerfil,
     logout
   }
 })

@@ -3,6 +3,8 @@
  * Desarrollado con TDD
  */
 
+import { hoyEnZona } from '@/utils/fecha'
+
 function calcularDiferenciaDias(fechaA, fechaB) {
   const [yA, mA, dA] = fechaA.split('-').map(Number)
   const [yB, mB, dB] = fechaB.split('-').map(Number)
@@ -17,14 +19,16 @@ function calcularDiferenciaDias(fechaA, fechaB) {
  * Determina el estado del semáforo para una mensualidad
  * @param {Object} params
  * @param {string} params.fechaFin - Fecha de vencimiento (YYYY-MM-DD)
- * @param {string} [params.fechaReferencia] - Fecha actual/base (YYYY-MM-DD)
+ * @param {string} [params.zonaHoraria] - Zona del parqueadero para calcular "hoy"
+ * @param {string} [params.fechaReferencia] - Fecha actual/base (YYYY-MM-DD); por defecto hoy en la zona
  * @param {number} [params.diasAviso=5] - Días de anticipación para estado 'por_vencer'
  * @param {number} [params.diasGracia=0] - Días de gracia antes de marcar 'vencida'
  * @returns {{ estado: 'al_dia'|'por_vencer'|'vencida', diasRestantes: number, diasMora: number, esHoy: boolean, color: 'verde'|'amarillo'|'rojo' }}
  */
 export function clasificarEstadoMensualidad({
   fechaFin,
-  fechaReferencia = new Date().toISOString().slice(0, 10),
+  zonaHoraria = 'America/Bogota',
+  fechaReferencia = hoyEnZona(zonaHoraria),
   diasAviso = 5,
   diasGracia = 0
 }) {

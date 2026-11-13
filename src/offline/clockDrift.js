@@ -17,15 +17,15 @@ try {
 } catch (e) {}
 
 /**
- * Actualiza el offset a partir de una fecha recibida del servidor
- * @param {Date|number|string} serverDate 
+ * Actualiza el offset a partir de una hora recibida del servidor.
+ * @param {Date|number|string} serverDate - hora del servidor (nunca Date.now() del dispositivo)
+ * @param {number} [deviceTime] - hora del dispositivo en el mismo instante (por defecto ahora)
  */
-export function syncServerTime(serverDate) {
+export function syncServerTime(serverDate, deviceTime = Date.now()) {
   const serverTime = new Date(serverDate).getTime()
   if (isNaN(serverTime)) return
 
-  const deviceTime = Date.now()
-  currentOffsetMs = serverTime - deviceTime
+  currentOffsetMs = Math.round(serverTime - deviceTime)
 
   try {
     localStorage.setItem(DRIFT_STORAGE_KEY, currentOffsetMs.toString())

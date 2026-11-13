@@ -1,324 +1,286 @@
 <template>
-  <div class="space-y-6">
-    <!-- Encabezado de Sección -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div>
-        <h2 class="text-xl md:text-2xl font-bold tracking-tight text-text-primary">Reportes Financieros</h2>
-        <p class="text-xs md:text-sm text-text-secondary">
-          Consolidado de ingresos por horas y mensualidades con desglose por tipo y método de pago (HU-25).
-        </p>
-      </div>
-
-      <!-- Botones de Exportación -->
-      <div class="flex items-center space-x-2">
-        <button 
-          @click="exportarExcel"
-          :disabled="cargando"
-          class="inline-flex items-center space-x-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors disabled:opacity-50"
-        >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <span>Exportar Excel (.xlsx)</span>
-        </button>
-
-        <button 
-          @click="exportarCSV"
-          :disabled="cargando"
-          class="inline-flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border bg-surface text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors disabled:opacity-50"
-        >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          <span>CSV</span>
-        </button>
-      </div>
+  <div class="space-y-6 max-w-5xl">
+    <div>
+      <h2 class="titulo-pagina">Reportes de ingresos</h2>
+      <p class="subtitulo-pagina">Fechas en la zona horaria del parqueadero ({{ authStore.zonaHoraria }}).</p>
     </div>
 
-    <!-- Filtros de Fecha y Rangos Rápidos -->
-    <div class="bg-surface rounded-2xl border border-border p-4 shadow-sm space-y-3">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <!-- Rangos rápidos -->
-        <div class="flex items-center space-x-1.5">
-          <button 
-            v-for="r in rangosRapidos" 
-            :key="r.id"
-            @click="seleccionarRango(r.id)"
-            class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors border"
-            :class="rangoActivo === r.id ? 'bg-primary text-white border-primary' : 'bg-surface-elevated text-text-secondary border-border hover:text-text-primary'"
-          >
-            {{ r.nombre }}
-          </button>
-        </div>
+    <div v-if="!conexion.isOnline" class="alerta-aviso">Los reportes requieren conexión.</div>
+    <div v-if="errorMensaje" class="alerta-error" role="alert">{{ errorMensaje }}</div>
 
-        <!-- Inputs de fecha -->
-        <div class="flex items-center space-x-2">
-          <div class="flex items-center space-x-1">
-            <span class="text-xs text-text-muted">Desde:</span>
-            <input 
-              v-model="fechaDesde" 
-              type="date" 
-              class="input-field text-xs py-1 px-2 w-auto"
-              @change="rangoActivo = 'personalizado'; cargarReporte()" 
-            />
+    <div class="card-craft p-4 sm:p-5 space-y-4">
+      <div class="flex flex-wrap gap-2">
+        <button v-for="r in rangosRapidos" :key="r.id" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" @click="aplicarRango(r.id)">{{ r.nombre }}</button>
+      </div>
+      <form class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end" @submit.prevent="cargar">
+        <label><span class="etiqueta">Desde</span><input v-model="desde" type="date" class="campo" /></label>
+        <label><span class="etiqueta">Hasta</span><input v-model="hasta" type="date" class="campo" /></label>
+        <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="cargando || !conexion.isOnline">Consultar</button>
+        <div class="flex gap-2">
+          <button type="button" class="btn-craft-subtle text-sm px-3 py-2 rounded-lg flex-1" :disabled="!reporte || exportando" @click="exportarExcel">Excel</button>
+          <button type="button" class="btn-craft-subtle text-sm px-3 py-2 rounded-lg flex-1" :disabled="!reporte || exportando" @click="exportarCSV">CSV</button>
+        </div>
+      </form>
+    </div>
+
+    <div v-if="cargando" class="vacio py-16">
+      <div class="spinner"></div>
+      <span class="text-xs">Calculando reporte…</span>
+    </div>
+
+    <template v-else-if="reporte">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="card-craft p-5 border-l-4 border-l-primary">
+          <p class="rotulo">Total del rango</p>
+          <p class="text-3xl font-semibold tracking-tight num-tabular mt-1">{{ pesos(reporte.gran_total) }}</p>
+        </div>
+        <div class="card-craft p-5">
+          <p class="rotulo">Parqueo por hora</p>
+          <p class="text-2xl font-semibold tracking-tight num-tabular mt-1">{{ pesos(reporte.total_hora) }}</p>
+        </div>
+        <div class="card-craft p-5">
+          <p class="rotulo">Mensualidades</p>
+          <p class="text-2xl font-semibold tracking-tight num-tabular mt-1">{{ pesos(reporte.total_mensualidades) }}</p>
+        </div>
+      </div>
+
+      <div v-if="reporte.requieren_revision || reporte.conflictos_sync" class="alerta-aviso flex-col gap-1">
+        <p v-if="reporte.requieren_revision">{{ reporte.requieren_revision }} cobro(s) hechos sin conexión difieren del cálculo del servidor y requieren revisión (ver hoja "Registros").</p>
+        <p v-if="reporte.conflictos_sync">{{ reporte.conflictos_sync }} operación(es) de sincronización con conflicto o error (ver abajo).</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card-craft overflow-hidden">
+          <h3 class="titulo-seccion px-5 pt-5 pb-3">Por día</h3>
+          <div class="overflow-x-auto">
+            <table class="tabla">
+              <thead><tr><th>Fecha</th><th class="text-right">Hora</th><th class="text-right">Mensual.</th><th class="text-right">Total</th></tr></thead>
+              <tbody>
+                <tr v-for="d in reporte.por_dia" :key="d.fecha">
+                  <td class="text-text-secondary">{{ formatearFechaCorta(d.fecha) }}</td>
+                  <td class="text-right num-tabular">{{ pesos(d.hora) }}</td>
+                  <td class="text-right num-tabular">{{ pesos(d.mensualidades) }}</td>
+                  <td class="text-right num-tabular font-semibold">{{ pesos(d.total) }}</td>
+                </tr>
+                <tr v-if="!reporte.por_dia.length"><td colspan="4" class="text-text-muted text-xs">Sin ingresos en el rango.</td></tr>
+              </tbody>
+            </table>
           </div>
-          <div class="flex items-center space-x-1">
-            <span class="text-xs text-text-muted">Hasta:</span>
-            <input 
-              v-model="fechaHasta" 
-              type="date" 
-              class="input-field text-xs py-1 px-2 w-auto"
-              @change="rangoActivo = 'personalizado'; cargarReporte()" 
-            />
+        </div>
+
+        <div class="card-craft overflow-hidden">
+          <h3 class="titulo-seccion px-5 pt-5 pb-3">Por método de pago</h3>
+          <div class="overflow-x-auto">
+            <table class="tabla">
+              <thead><tr><th>Método</th><th class="text-right">Hora</th><th class="text-right">Mensual.</th><th class="text-right">Total</th></tr></thead>
+              <tbody>
+                <tr v-for="m in reporte.por_metodo" :key="m.metodo">
+                  <td>{{ m.metodo }} <span v-if="m.es_efectivo" class="badge-pastel-mint px-1.5 py-px rounded-full text-2xs">efectivo</span></td>
+                  <td class="text-right num-tabular">{{ pesos(m.hora) }}</td>
+                  <td class="text-right num-tabular">{{ pesos(m.mensualidades) }}</td>
+                  <td class="text-right num-tabular font-semibold">{{ pesos(m.total) }}</td>
+                </tr>
+                <tr v-if="!reporte.por_metodo.length"><td colspan="4" class="text-text-muted text-xs">Sin cobros.</td></tr>
+              </tbody>
+            </table>
           </div>
-          <button 
-            @click="cargarReporte"
-            class="p-1.5 text-xs font-semibold rounded-lg bg-surface-elevated hover:bg-border text-text-primary border border-border"
-            title="Actualizar datos"
-          >
-            <svg class="w-4 h-4" :class="{ 'animate-spin': cargando }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
         </div>
-      </div>
-    </div>
 
-    <!-- Indicador de Notificación -->
-    <div v-if="notificacion" class="p-3 bg-success-bg border border-success text-success text-xs rounded-xl flex items-center justify-between">
-      <span>{{ notificacion }}</span>
-      <button @click="notificacion = ''" class="font-bold underline ml-2">✕</button>
-    </div>
+        <div class="card-craft p-5 text-sm">
+          <h3 class="titulo-seccion mb-2">Por tipo de vehículo (parqueo por hora)</h3>
+          <p v-for="t in reporte.por_tipo" :key="t.tipo" class="flex justify-between border-t border-border-subtle py-2">
+            <span class="text-text-secondary">{{ t.tipo }} <span class="text-text-muted">({{ t.cantidad }})</span></span>
+            <span class="num-tabular font-semibold">{{ pesos(t.total) }}</span>
+          </p>
+          <p v-if="!reporte.por_tipo.length" class="text-text-muted text-xs">Sin salidas cobradas.</p>
+        </div>
 
-    <!-- Tarjetas de Totales Generales -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <!-- Total Por Horas -->
-      <div class="bg-surface rounded-2xl border border-border p-5 shadow-sm">
-        <p class="text-xs font-semibold text-text-secondary uppercase tracking-wider">Ingresos por Horas</p>
-        <p class="text-2xl md:text-3xl font-bold text-text-primary mt-2 font-mono">
-          ${{ (datosReporte.total_hora || 0).toLocaleString() }}
-        </p>
-        <p class="text-[11px] text-text-muted mt-1">Estancias rotativas en patio</p>
-      </div>
-
-      <!-- Total Mensualidades -->
-      <div class="bg-surface rounded-2xl border border-border p-5 shadow-sm">
-        <p class="text-xs font-semibold text-text-secondary uppercase tracking-wider">Ingresos Mensualidades</p>
-        <p class="text-2xl md:text-3xl font-bold text-text-primary mt-2 font-mono">
-          ${{ (datosReporte.total_mensualidades || 0).toLocaleString() }}
-        </p>
-        <p class="text-[11px] text-text-muted mt-1">Abonos y renovaciones de contratos</p>
-      </div>
-
-      <!-- Gran Total -->
-      <div class="bg-surface rounded-2xl border border-primary/30 bg-primary-bg/20 p-5 shadow-sm">
-        <p class="text-xs font-bold text-primary uppercase tracking-wider">Gran Total Recaudado</p>
-        <p class="text-2xl md:text-3xl font-extrabold text-primary mt-2 font-mono">
-          ${{ (datosReporte.gran_total || 0).toLocaleString() }}
-        </p>
-        <p class="text-[11px] text-primary/80 mt-1 font-medium">100% de operaciones conciliadas</p>
-      </div>
-    </div>
-
-    <!-- Desglose por Tipo de Vehículo y Método de Pago -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Tabla: Por Tipo de Vehículo -->
-      <div class="bg-surface rounded-2xl border border-border p-5 shadow-sm space-y-4">
-        <h3 class="text-sm font-bold text-text-primary flex items-center justify-between">
-          <span>Ingresos por Tipo de Vehículo</span>
-          <span class="text-xs text-text-muted font-normal">Patio y mensualidades</span>
-        </h3>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="text-text-secondary border-b border-border uppercase font-semibold text-[10px]">
-              <tr>
-                <th class="py-2">Tipo</th>
-                <th class="py-2 text-center">Operaciones</th>
-                <th class="py-2 text-right">Total ($)</th>
-                <th class="py-2 text-right">% Participación</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border">
-              <tr v-for="t in datosReporte.por_tipo" :key="t.tipo" class="hover:bg-surface-elevated/40">
-                <td class="py-2.5 font-medium text-text-primary">{{ t.tipo }}</td>
-                <td class="py-2.5 text-center text-text-secondary">{{ t.cantidad }}</td>
-                <td class="py-2.5 text-right font-mono font-bold text-text-primary">${{ t.total.toLocaleString() }}</td>
-                <td class="py-2.5 text-right text-text-muted font-mono">
-                  {{ calcularPorcentaje(t.total, datosReporte.gran_total) }}%
-                </td>
-              </tr>
-              <tr v-if="!datosReporte.por_tipo?.length" class="text-center text-text-muted py-4">
-                <td colspan="4" class="py-4">No hay datos en el periodo</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="card-craft p-5 text-sm">
+          <h3 class="titulo-seccion mb-2">Por origen</h3>
+          <p v-for="o in reporte.por_origen" :key="o.origen" class="flex justify-between border-t border-border-subtle py-2">
+            <span class="text-text-secondary">{{ o.origen }}</span><span class="num-tabular font-semibold">{{ pesos(o.total) }}</span>
+          </p>
         </div>
       </div>
 
-      <!-- Tabla: Por Método de Pago -->
-      <div class="bg-surface rounded-2xl border border-border p-5 shadow-sm space-y-4">
-        <h3 class="text-sm font-bold text-text-primary flex items-center justify-between">
-          <span>Ingresos por Método de Pago</span>
-          <span class="text-xs text-text-muted font-normal">Efectivo vs Digital</span>
-        </h3>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="text-text-secondary border-b border-border uppercase font-semibold text-[10px]">
-              <tr>
-                <th class="py-2">Método</th>
-                <th class="py-2 text-center">Naturaleza</th>
-                <th class="py-2 text-right">Total ($)</th>
-                <th class="py-2 text-right">% Participación</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border">
-              <tr v-for="m in datosReporte.por_metodo" :key="m.metodo" class="hover:bg-surface-elevated/40">
-                <td class="py-2.5 font-medium text-text-primary">{{ m.metodo }}</td>
-                <td class="py-2.5 text-center">
-                  <span 
-                    class="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                    :class="m.es_efectivo ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' : 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'"
-                  >
-                    {{ m.es_efectivo ? 'Efectivo en Caja' : 'Digital / Banco' }}
-                  </span>
-                </td>
-                <td class="py-2.5 text-right font-mono font-bold text-text-primary">${{ m.total.toLocaleString() }}</td>
-                <td class="py-2.5 text-right text-text-muted font-mono">
-                  {{ calcularPorcentaje(m.total, datosReporte.gran_total) }}%
-                </td>
-              </tr>
-              <tr v-if="!datosReporte.por_metodo?.length" class="text-center text-text-muted py-4">
-                <td colspan="4" class="py-4">No hay datos en el periodo</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="card-craft p-5 text-sm">
+        <h3 class="titulo-seccion">Anulados</h3>
+        <p class="text-xs text-text-muted mt-0.5 mb-2">No suman en los totales.</p>
+        <div v-for="(a, i) in reporte.anulados" :key="i" class="flex flex-wrap justify-between gap-2 border-t border-border-subtle py-2">
+          <span class="text-text-secondary">{{ a.origen === 'registro' ? 'Parqueo' : 'Mensualidad' }}<span v-if="a.placa" class="font-mono"> · {{ a.placa }}</span> · {{ a.fecha ? fh(a.fecha) : '—' }} · {{ a.motivo }}</span>
+          <span class="num-tabular line-through text-text-muted">{{ pesos(a.valor) }}</span>
         </div>
+        <p v-if="!reporte.anulados.length" class="text-xs text-text-muted">No hay anulaciones en el rango.</p>
       </div>
+    </template>
+
+    <!-- Conflictos de sincronización (HU-26) -->
+    <div class="card-craft p-5 text-sm">
+      <div class="flex justify-between items-center gap-3">
+        <h3 class="titulo-seccion">Conflictos de sincronización</h3>
+        <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :disabled="!conexion.isOnline" @click="cargarConflictos">Actualizar</button>
+      </div>
+      <p class="text-xs text-text-muted mt-1 mb-2">Operaciones hechas sin conexión que el servidor no pudo aplicar tal cual. Se aplicó la primera operación; revisa estas y corrige manualmente si hace falta.</p>
+      <div v-for="c in conflictos" :key="c.id" class="border-t border-border-subtle py-2.5 space-y-0.5">
+        <div class="flex flex-wrap justify-between gap-2">
+          <strong class="font-semibold">{{ tipoOperacion(c.tipo) }}<span v-if="c.payload?.placa" class="font-mono"> · {{ c.payload.placa }}</span></strong>
+          <span class="px-2 py-0.5 rounded-full text-2xs" :class="c.resultado === 'error' ? 'badge-pastel-rose' : 'badge-pastel-amber'">{{ c.resultado }}</span>
+        </div>
+        <p class="text-xs text-text-secondary">{{ fh(c.creada_en_dispositivo_at) }} (dispositivo) · {{ c.profiles?.nombre || '—' }}</p>
+        <p class="text-xs text-danger">{{ c.detalle }}</p>
+      </div>
+      <p v-if="!conflictos.length" class="text-xs text-text-muted">Sin conflictos.</p>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { reportesService } from '../services/reportesService'
+import { useAuthStore } from '@/stores/auth'
+import { useConexionStore } from '@/stores/conexion'
+import { reportesService } from '@/modules/reportes/services/reportesService'
+import { mensualidadesService } from '@/modules/mensualidades/services/mensualidadesService'
+import { mensajeDeError } from '@/lib/sesionCaches'
+import { hoyEnZona, sumarDias, formatearFechaHora, formatearFechaCorta } from '@/utils/fecha'
 
+const authStore = useAuthStore()
+const conexion = useConexionStore()
+const claseInput = 'campo'
+
+const hoy = hoyEnZona(authStore.zonaHoraria)
+const desde = ref(hoy)
+const hasta = ref(hoy)
+const reporte = ref(null)
+const conflictos = ref([])
 const cargando = ref(false)
-const notificacion = ref('')
-const rangoActivo = ref('hoy')
-
-const fechaDesde = ref('')
-const fechaHasta = ref('')
+const exportando = ref(false)
+const errorMensaje = ref('')
 
 const rangosRapidos = [
   { id: 'hoy', nombre: 'Hoy' },
-  { id: '7dias', nombre: 'Últimos 7 días' },
-  { id: 'esteMes', nombre: 'Este Mes' },
-  { id: 'mesAnterior', nombre: 'Mes Anterior' }
+  { id: '7', nombre: 'Últimos 7 días' },
+  { id: 'mes', nombre: 'Este mes' }
 ]
 
-const datosReporte = ref({
-  total_hora: 0,
-  total_mensualidades: 0,
-  gran_total: 0,
-  por_tipo: [],
-  por_metodo: []
-})
-
-function seleccionarRango(id) {
-  rangoActivo.value = id
-  const hoy = new Date()
-  
-  if (id === 'hoy') {
-    const ymd = hoy.toISOString().split('T')[0]
-    fechaDesde.value = ymd
-    fechaHasta.value = ymd
-  } else if (id === '7dias') {
-    const d = new Date(hoy)
-    d.setDate(d.getDate() - 7)
-    fechaDesde.value = d.toISOString().split('T')[0]
-    fechaHasta.value = hoy.toISOString().split('T')[0]
-  } else if (id === 'esteMes') {
-    const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-    const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
-    fechaDesde.value = primerDia.toISOString().split('T')[0]
-    fechaHasta.value = ultimoDia.toISOString().split('T')[0]
-  } else if (id === 'mesAnterior') {
-    const primerDia = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
-    const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth(), 0)
-    fechaDesde.value = primerDia.toISOString().split('T')[0]
-    fechaHasta.value = ultimoDia.toISOString().split('T')[0]
-  }
-
-  cargarReporte()
+function pesos(v) { return `$${Number(v || 0).toLocaleString('es-CO')}` }
+function fh(v) { return formatearFechaHora(v, authStore.zonaHoraria, { year: 'numeric' }) }
+function tipoOperacion(t) {
+  return { entrada: 'Entrada', salida: 'Salida', pago_mensualidad: 'Pago de mensualidad', aviso: 'Aviso' }[t] || t
 }
 
-async function cargarReporte() {
+function aplicarRango(id) {
+  const h = hoyEnZona(authStore.zonaHoraria)
+  hasta.value = h
+  desde.value = id === 'hoy' ? h : id === '7' ? sumarDias(h, -6) : `${h.slice(0, 8)}01`
+  cargar()
+}
+
+async function cargar() {
+  if (!conexion.isOnline) return
+  if (desde.value > hasta.value) {
+    errorMensaje.value = 'La fecha inicial no puede ser posterior a la final'
+    return
+  }
+  errorMensaje.value = ''
   cargando.value = true
   try {
-    const res = await reportesService.obtenerReporteIngresos(fechaDesde.value, fechaHasta.value)
-    datosReporte.value = res || {
-      total_hora: 0,
-      total_mensualidades: 0,
-      gran_total: 0,
-      por_tipo: [],
-      por_metodo: []
-    }
-  } catch (err) {
-    console.error('Error al cargar reporte:', err)
+    reporte.value = await reportesService.obtenerReporteIngresos(desde.value, hasta.value)
+  } catch (e) {
+    reporte.value = null
+    errorMensaje.value = mensajeDeError(e, 'No se pudo generar el reporte')
   } finally {
     cargando.value = false
   }
 }
 
-function calcularPorcentaje(parcial, total) {
-  if (!total || total === 0) return 0
-  return ((parcial / total) * 100).toFixed(1)
-}
-
-function exportarExcel() {
-  const resumen = [
-    { Concepto: 'Total Por Horas', Monto: datosReporte.value.total_hora },
-    { Concepto: 'Total Mensualidades', Monto: datosReporte.value.total_mensualidades },
-    { Concepto: 'Gran Total Recaudado', Monto: datosReporte.value.gran_total }
-  ]
-
-  const vehiculos = datosReporte.value.por_tipo.map(t => ({
-    'Tipo de Vehículo': t.tipo,
-    'Cantidad Operaciones': t.cantidad,
-    'Total Recaudado': t.total,
-    'Porcentaje (%)': Number(calcularPorcentaje(t.total, datosReporte.value.gran_total))
-  }))
-
-  const metodos = datosReporte.value.por_metodo.map(m => ({
-    'Método de Pago': m.metodo,
-    'Es Efectivo': m.es_efectivo ? 'Sí' : 'No',
-    'Total Recaudado': m.total,
-    'Porcentaje (%)': Number(calcularPorcentaje(m.total, datosReporte.value.gran_total))
-  }))
-
-  const hojas = {
-    'Resumen General': resumen,
-    'Por Tipo Vehiculo': vehiculos,
-    'Por Metodo Pago': metodos
+async function cargarConflictos() {
+  if (!conexion.isOnline) return
+  try {
+    conflictos.value = await reportesService.listarConflictosSync(authStore.parqueaderoId)
+  } catch (e) {
+    errorMensaje.value = mensajeDeError(e, 'No se pudieron cargar los conflictos')
   }
-
-  reportesService.exportarAExcel(`Reporte_Ingresos_${fechaDesde.value}_a_${fechaHasta.value}`, hojas)
-  notificacion.value = 'Reporte exportado exitosamente a formato Excel (.xlsx) con valores numéricos reales.'
 }
 
-function exportarCSV() {
-  const datosCSV = [
-    ...datosReporte.value.por_tipo.map(t => ({ Categoria: 'Vehículo', Detalle: t.tipo, Cantidad: t.cantidad, Total: t.total })),
-    ...datosReporte.value.por_metodo.map(m => ({ Categoria: 'Método', Detalle: m.metodo, Cantidad: 1, Total: m.total }))
-  ]
+async function obtenerRegistros() {
+  return reportesService.obtenerDetalleRegistros({
+    parqueaderoId: authStore.parqueaderoId,
+    fechaDesde: desde.value,
+    fechaHasta: hasta.value,
+    zonaHoraria: authStore.zonaHoraria
+  })
+}
 
-  reportesService.exportarACSV(`Reporte_Ingresos_${fechaDesde.value}_a_${fechaHasta.value}`, datosCSV)
-  notificacion.value = 'Reporte exportado exitosamente a CSV.'
+const nombreArchivo = () => `ingresos-${desde.value}-a-${hasta.value}`
+
+async function exportarExcel() {
+  exportando.value = true
+  errorMensaje.value = ''
+  try {
+    const r = reporte.value
+    const [registros, mensualidades] = await Promise.all([
+      obtenerRegistros(),
+      mensualidadesService.listarMensualidades(authStore.parqueaderoId, {
+        diasAviso: authStore.diasAviso,
+        zonaHoraria: authStore.zonaHoraria,
+        incluirInactivas: true
+      })
+    ])
+    reportesService.exportarAExcel(nombreArchivo(), {
+      Resumen: [
+        { Concepto: 'Desde', Valor: desde.value },
+        { Concepto: 'Hasta', Valor: hasta.value },
+        { Concepto: 'Parqueo por hora', Valor: Number(r.total_hora) },
+        { Concepto: 'Mensualidades', Valor: Number(r.total_mensualidades) },
+        { Concepto: 'Total', Valor: Number(r.gran_total) },
+        { Concepto: 'Cobros que requieren revisión', Valor: Number(r.requieren_revision || 0) },
+        { Concepto: 'Conflictos de sincronización', Valor: Number(r.conflictos_sync || 0) }
+      ],
+      'Por día': r.por_dia.map(d => ({ Fecha: d.fecha, 'Parqueo por hora': Number(d.hora), Mensualidades: Number(d.mensualidades), Total: Number(d.total) })),
+      'Por tipo': r.por_tipo.map(t => ({ Tipo: t.tipo, Cantidad: Number(t.cantidad), Total: Number(t.total) })),
+      'Por método': r.por_metodo.map(m => ({ Método: m.metodo, Efectivo: m.es_efectivo ? 'Sí' : 'No', 'Parqueo por hora': Number(m.hora), Mensualidades: Number(m.mensualidades), Total: Number(m.total) })),
+      Registros: registros,
+      Mensualidades: mensualidades.map(m => ({
+        Cliente: m.clientes?.nombre || '',
+        Documento: m.clientes?.documento || '',
+        Teléfono: m.clientes?.telefono || '',
+        Placa: m.vehiculos?.placa || '',
+        Plan: m.planes_mensuales?.nombre || '',
+        Valor: Number(m.planes_mensuales?.valor || 0),
+        'Fecha inicio': m.fecha_inicio,
+        'Vence': m.fecha_fin,
+        Activa: m.activa ? 'Sí' : 'No',
+        Estado: m.activa ? ({ al_dia: 'Al día', por_vencer: 'Por vencer', vencida: 'Vencida' }[m.clasificacion?.estado] || '') : 'Desactivada'
+      })),
+      Anulados: r.anulados.map(a => ({
+        Origen: a.origen === 'registro' ? 'Parqueo' : 'Mensualidad',
+        Fecha: a.fecha ? fh(a.fecha) : '',
+        Placa: a.placa || '',
+        Valor: Number(a.valor || 0),
+        Motivo: a.motivo || ''
+      }))
+    })
+  } catch (e) {
+    errorMensaje.value = mensajeDeError(e, 'No se pudo exportar')
+  } finally {
+    exportando.value = false
+  }
+}
+
+async function exportarCSV() {
+  exportando.value = true
+  errorMensaje.value = ''
+  try {
+    reportesService.exportarACSV(`registros-${desde.value}-a-${hasta.value}`, await obtenerRegistros())
+  } catch (e) {
+    errorMensaje.value = mensajeDeError(e, 'No se pudo exportar')
+  } finally {
+    exportando.value = false
+  }
 }
 
 onMounted(() => {
-  seleccionarRango('hoy')
+  cargar()
+  cargarConflictos()
 })
 </script>

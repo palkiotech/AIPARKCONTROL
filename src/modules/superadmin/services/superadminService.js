@@ -1,8 +1,10 @@
 import { supabase } from '@/lib/supabase'
+import { usuariosService } from '@/modules/usuarios/services/usuariosService'
 
 export const superadminService = {
   /**
-   * Obtiene la lista de parqueaderos con conteo de usuarios (HU-05)
+   * Parqueaderos con email del admin, usuarios, registros del último mes y
+   * última actividad (HU-05). No expone clientes, placas ni montos.
    */
   async listarParqueaderos() {
     const { data, error } = await supabase.rpc('obtener_parqueaderos_superadmin')
@@ -11,9 +13,12 @@ export const superadminService = {
   },
 
   /**
-   * Da de alta un nuevo parqueadero (HU-01)
+   * Da de alta un parqueadero (siembra Carro, Moto, una tarifa y "Efectivo")
+   * e invita a su administrador por correo (HU-01).
+   * Si la invitación falla (p. ej. correo ya registrado), el parqueadero queda
+   * creado sin admin y se informa el motivo para reintentar.
    */
-  async crearParqueadero({ nombre, nit, direccion = '', telefono = '' }) {
+  async crearParqueadero({ nombre, nit, direccion = '', telefono = '', adminNombre, adminEmail }) {
     const { data, error } = await supabase.rpc('crear_parqueadero', {
       p_nombre: nombre.trim(),
       p_nit: nit.trim(),
@@ -21,12 +26,31 @@ export const superadminService = {
       p_telefono: telefono.trim()
     })
     if (error) throw error
-    return data
+
+    let errorInvitacion = null
+    if (adminEmail) {
+      try {
+        await usuariosService.invitar({
+          email: adminEmail,
+          nombre: adminNombre || 'Administrador',
+          rol: 'admin',
+          parqueaderoId: data.parqueadero_id
+        })
+      } catch (e) {
+        errorInvitacion = e.message
+      }
+    }
+    return { ...data, errorInvitacion }
   },
 
-  /**
-   * Suspende o activa un parqueadero (HU-05)
-   */
+  async invitarAdmin(parqueaderoId, { nombre, email }) {
+    return usuariosService.invitar({ email, nombre, rol: 'admin', parqueaderoId })
+  },
+
+  async reenviarAcceso(email) {
+    return usuariosService.reenviarAcceso(email)
+  },
+
   async cambiarEstado(parqueaderoId, nuevoEstado) {
     const { data, error } = await supabase.rpc('cambiar_estado_parqueadero', {
       p_parqueadero_id: parqueaderoId,

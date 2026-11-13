@@ -25,7 +25,7 @@
 | **Estilos y Diseño** | Tailwind CSS 3 (tema claro/oscuro con variables de tokens CSS) |
 | **Base de Datos y Auth** | Supabase (PostgreSQL 15, Auth, Row Level Security, Realtime) |
 | **Almacenamiento Local** | Dexie.js (IndexedDB) |
-| **Pruebas Unitarias** | Vitest (30 pruebas unitarias de lógica pura) |
+| **Pruebas** | Vitest (dominio, fechas y offline) + validación SQL con PGlite (`npm run test:db`) |
 | **Reportes y Comprobantes** | jsPDF, jsPDF-AutoTable, SheetJS (XLSX) |
 | **Hosting y Edge Worker** | Cloudflare Workers (Static Assets SPA + Cron Trigger Keep-Alive) |
 
@@ -66,7 +66,9 @@ AI PARKCONTROL/
 │   ├── stores/                # Pinia stores (auth, tema, conexion)
 │   └── utils/                 # Normalización de placas, número a letras COP, fechas
 ├── supabase/
-│   ├── migrations/            # 7 migraciones SQL secuenciales y versionadas
+│   ├── migrations/            # 9 migraciones SQL secuenciales y versionadas
+│   ├── functions/             # Edge Function invitar-usuario (HU-01, HU-03)
+│   ├── tests/                 # validar_migraciones.mjs (npm run test:db)
 │   ├── config.toml
 │   └── seed.sql               # Datos de prueba para desarrollo local
 ├── worker/
@@ -112,6 +114,9 @@ npm run test
 
 # Ejecutar en modo watch (TDD interactivo)
 npm run test:watch
+
+# Validar migraciones SQL y reglas de seguridad en Postgres (PGlite, sin Docker)
+npm run test:db
 ```
 
 ---
@@ -123,7 +128,7 @@ npm run test:watch
 2. Selecciona la región `sa-east-1` (São Paulo, Brasil) para menor latencia en Colombia.
 
 ### 2. Aplicar las Migraciones SQL
-En el panel de Supabase (**SQL Editor**) o mediante Supabase CLI (`npx supabase db push`), ejecuta en orden las 7 migraciones ubicadas en `supabase/migrations/`:
+En el panel de Supabase (**SQL Editor**) o mediante Supabase CLI (`npx supabase db push`), ejecuta en orden las 9 migraciones ubicadas en `supabase/migrations/`:
 
 1. `20261110000000_init.sql` (Función `keep_alive` para evitar pausa por inactividad).
 2. `20261110000001_acceso_multi_tenant.sql` (Tablas `parqueaderos`, `profiles`, RLS y seguridad multi-tenant).
@@ -132,6 +137,10 @@ En el panel de Supabase (**SQL Editor**) o mediante Supabase CLI (`npx supabase 
 5. `20261110000004_mensualidades_y_dashboard.sql` (Clientes, mensualidades, pagos y avisos).
 6. `20261110000005_sin_conexion.sql` (Cola de sincronización offline y conciliación).
 7. `20261110000006_comprobantes_y_reportes.sql` (Consecutivos de comprobantes y reportes financieros).
+8. `20261111000000_saneamiento.sql` (Seguridad RLS, cobro en el servidor, caja, usuarios y sincronización; ver `CAMBIOS_v1.1.md`).
+9. `20261111000001_storage_logos.sql` (Bucket de logos).
+
+Después despliega la Edge Function de invitaciones: `npx supabase functions deploy invitar-usuario` (detalle en `PASOS_SUPABASE.md`).
 
 *(Opcional para desarrollo)*: Ejecuta `supabase/seed.sql` para cargar datos iniciales de prueba (Parqueadero Central San, tarifas y planes demo).
 

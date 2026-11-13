@@ -20,3 +20,7 @@ supabase/.branches/
 .DS_Store
 Thumbs.db
 *.log
+
+# Respaldos locales de la base (contienen datos)
+respaldo-*.sql
+backup*.sql

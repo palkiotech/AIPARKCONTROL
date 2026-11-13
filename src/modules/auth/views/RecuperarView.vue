@@ -1,69 +1,159 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4 bg-background">
-    <div class="w-full max-w-sm bg-surface p-6 rounded-2xl border border-border shadow-md">
-      <div class="text-center mb-6">
-        <h2 class="text-xl font-bold">Recuperar Contraseña</h2>
-        <p class="text-xs text-text-muted mt-1">Te enviaremos un correo con las instrucciones</p>
+  <MarcoAcceso
+    :titulo="modo === 'definir' ? (esInvitacion ? 'Bienvenido a ParkControl' : 'Define tu contraseña') : 'Recuperar contraseña'"
+    :subtitulo="modo === 'definir' ? 'Crea una contraseña de al menos 8 caracteres.' : 'Te enviaremos un correo con un enlace para definir una nueva contraseña.'"
+  >
+    <!-- Modo B: llegó desde el enlace de invitación o recuperación -->
+    <template v-if="modo === 'definir'">
+      <div v-if="errorMensaje" class="alerta-error mb-5" role="alert">
+        {{ errorMensaje }}
       </div>
 
-      <div v-if="enviado" class="p-3 mb-4 rounded-lg bg-success-bg text-success text-xs font-medium border border-success/20">
-        Revisa tu bandeja de entrada. Te hemos enviado un enlace para restablecer tu contraseña.
+      <form @submit.prevent="handleDefinir" class="space-y-4">
+        <div>
+          <label for="pass1" class="etiqueta">Nueva contraseña</label>
+          <input
+            id="pass1"
+            v-model="password"
+            type="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            class="campo py-2.5"
+          />
+        </div>
+        <div>
+          <label for="pass2" class="etiqueta">Confirmar contraseña</label>
+          <input
+            id="pass2"
+            v-model="confirmacion"
+            type="password"
+            required
+            minlength="8"
+            autocomplete="new-password"
+            class="campo py-2.5"
+          />
+        </div>
+        <button
+          type="submit"
+          :disabled="cargando"
+          class="btn-craft-primary w-full py-2.5 rounded-lg text-sm"
+        >
+          {{ cargando ? 'Guardando…' : 'Guardar contraseña y entrar' }}
+        </button>
+      </form>
+    </template>
+
+    <!-- Modo A: solicitar correo de recuperación -->
+    <template v-else>
+      <div v-if="enviado" class="alerta-exito mb-5">
+        Si el correo está registrado, recibirás un enlace para definir una nueva contraseña. Revisa también la carpeta de spam.
       </div>
 
-      <div v-if="errorMensaje" class="p-3 mb-4 rounded-lg bg-danger-bg text-danger text-xs font-medium border border-danger/20">
+      <div v-if="errorMensaje" class="alerta-error mb-5" role="alert">
         {{ errorMensaje }}
       </div>
 
       <form v-if="!enviado" @submit.prevent="handleRecuperar" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold mb-1 text-text-secondary">Correo electrónico</label>
-          <input 
+          <label for="rec-email" class="etiqueta">Correo electrónico</label>
+          <input
+            id="rec-email"
             v-model="email"
-            type="email" 
+            type="email"
             required
-            class="w-full px-3 py-2 text-sm rounded-lg bg-surface-elevated border border-border focus:outline-none focus:border-primary text-text-primary"
+            class="campo py-2.5"
             placeholder="usuario@parqueadero.com"
           />
         </div>
-
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           :disabled="cargando"
-          class="w-full py-2.5 px-4 bg-primary text-white font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+          class="btn-craft-primary w-full py-2.5 rounded-lg text-sm"
         >
-          <span v-if="cargando">Enviando enlace...</span>
-          <span v-else>Enviar Enlace de Recuperación</span>
+          {{ cargando ? 'Enviando enlace…' : 'Enviar enlace de recuperación' }}
         </button>
       </form>
+    </template>
 
-      <div class="mt-4 text-center">
-        <router-link to="/login" class="text-xs text-primary hover:underline font-medium">
-          ← Volver a iniciar sesión
-        </router-link>
-      </div>
+    <div class="mt-8 pt-5 border-t border-border">
+      <router-link to="/login" class="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+        Volver a iniciar sesión
+      </router-link>
     </div>
-  </div>
+  </MarcoAcceso>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import MarcoAcceso from '@/components/MarcoAcceso.vue'
 import { authService } from '@/modules/auth/services/authService'
+import { mensajeDeError } from '@/lib/sesionCaches'
 
+// Leer el hash antes de que Supabase lo procese y lo limpie de la URL
+const hashInicial = typeof window !== 'undefined' ? window.location.hash : ''
+const tipoEnlace = new URLSearchParams(hashInicial.replace(/^#/, '')).get('type')
+
+const modo = ref(tipoEnlace === 'invite' || tipoEnlace === 'recovery' ? 'definir' : 'solicitar')
+const esInvitacion = ref(tipoEnlace === 'invite')
 const email = ref('')
+const password = ref('')
+const confirmacion = ref('')
 const cargando = ref(false)
 const enviado = ref(false)
 const errorMensaje = ref('')
+let cancelarEscucha = null
+
+onMounted(async () => {
+  cancelarEscucha = authService.onCambioSesion((evento) => {
+    if (evento === 'PASSWORD_RECOVERY') modo.value = 'definir'
+  })
+  if (modo.value === 'solicitar') {
+    try {
+      const sesion = await authService.obtenerSesion()
+      if (sesion && hashInicial.includes('access_token')) modo.value = 'definir'
+    } catch (e) {}
+  }
+})
+
+onBeforeUnmount(() => {
+  if (cancelarEscucha) cancelarEscucha()
+})
 
 async function handleRecuperar() {
   if (!email.value) return
   errorMensaje.value = ''
   cargando.value = true
-
   try {
     await authService.recuperarPassword(email.value)
     enviado.value = true
   } catch (err) {
-    errorMensaje.value = err.message || 'No se pudo enviar el correo de recuperación'
+    errorMensaje.value = mensajeDeError(err, 'No se pudo enviar el correo de recuperación')
+  } finally {
+    cargando.value = false
+  }
+}
+
+async function handleDefinir() {
+  errorMensaje.value = ''
+  if (password.value.length < 8) {
+    errorMensaje.value = 'La contraseña debe tener al menos 8 caracteres'
+    return
+  }
+  if (password.value !== confirmacion.value) {
+    errorMensaje.value = 'Las contraseñas no coinciden'
+    return
+  }
+  cargando.value = true
+  try {
+    const sesion = await authService.obtenerSesion()
+    if (!sesion) throw new Error('El enlace expiró o ya fue usado. Solicita uno nuevo.')
+    await authService.definirPassword(password.value)
+    // Recarga completa para inicializar la sesión y el perfil desde cero
+    window.location.assign('/')
+  } catch (err) {
+    errorMensaje.value = mensajeDeError(err, 'No se pudo guardar la contraseña')
   } finally {
     cargando.value = false
   }
