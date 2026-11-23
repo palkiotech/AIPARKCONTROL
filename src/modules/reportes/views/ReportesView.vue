@@ -10,7 +10,7 @@
 
     <div class="card-craft p-4 sm:p-5 space-y-4">
       <div class="flex flex-wrap gap-2">
-        <button v-for="r in rangosRapidos" :key="r.id" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" @click="aplicarRango(r.id)">{{ r.nombre }}</button>
+        <button v-for="r in rangosRapidos" :key="r.id" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0" @click="aplicarRango(r.id)">{{ r.nombre }}</button>
       </div>
       <form class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end" @submit.prevent="cargar">
         <label><span class="etiqueta">Desde</span><input v-model="desde" type="date" class="campo" /></label>
@@ -118,7 +118,7 @@
     <div class="card-craft p-5 text-sm">
       <div class="flex justify-between items-center gap-3">
         <h3 class="titulo-seccion">Conflictos de sincronización</h3>
-        <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :disabled="!conexion.isOnline" @click="cargarConflictos">Actualizar</button>
+        <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0" :disabled="!conexion.isOnline" @click="cargarConflictos">Actualizar</button>
       </div>
       <p class="text-xs text-text-muted mt-1 mb-2">Operaciones hechas sin conexión que el servidor no pudo aplicar tal cual. Se aplicó la primera operación; revisa estas y corrige manualmente si hace falta.</p>
       <div v-for="c in conflictos" :key="c.id" class="border-t border-border-subtle py-2.5 space-y-0.5">

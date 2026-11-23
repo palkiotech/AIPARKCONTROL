@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-6 max-w-5xl">
     <div class="flex items-start justify-between gap-3">
-      <div>
+      <div class="min-w-0">
         <h2 class="titulo-pagina">Inicio</h2>
         <p class="subtitulo-pagina">Semáforo de cobros, clientes para avisar y ocupación del momento.</p>
       </div>
-      <button class="btn-craft-subtle text-sm px-4 py-2 rounded-lg shrink-0" :disabled="cargando" @click="cargar(true)">
+      <button class="btn-craft-subtle text-sm px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg shrink-0" :disabled="cargando" @click="cargar(true)">
         <svg class="w-4 h-4" :class="cargando ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
@@ -15,6 +15,9 @@
 
     <div v-if="error" class="alerta-error" role="alert">
       {{ error }}
+    </div>
+    <div v-if="aviso.info" class="alerta-aviso">
+      {{ aviso.info }}
     </div>
 
     <div v-if="!datos && cargando" class="vacio py-24">
@@ -29,7 +32,7 @@
           v-for="card in tarjetas"
           :key="card.color"
           type="button"
-          class="card-craft card-interactiva p-3 md:p-5 text-left"
+          class="card-craft card-interactiva p-3 md:p-5 text-left min-w-0"
           :class="[card.clase, filtroColor === card.color ? 'ring-2 ring-offset-2 ring-offset-background ' + card.ring : '']"
           :aria-pressed="filtroColor === card.color"
           @click="filtroColor = filtroColor === card.color ? null : card.color"
@@ -39,10 +42,10 @@
             <span class="text-2xs font-semibold uppercase tracking-wider truncate" :class="card.texto">{{ card.titulo }}</span>
           </div>
           <div class="mt-2 flex items-baseline gap-1">
-            <span class="text-2xl md:text-4xl font-semibold tracking-tight num-tabular text-text-primary">{{ card.count }}</span>
+            <span class="text-2xl lg:text-4xl font-semibold tracking-tight num-tabular text-text-primary">{{ card.count }}</span>
             <span class="hidden sm:inline text-xs font-medium text-text-muted">clientes</span>
           </div>
-          <p class="text-2xs md:text-xs font-semibold mt-1 num-tabular" :class="card.texto">{{ pesos(card.valor) }}</p>
+          <p class="text-2xs md:text-xs font-semibold mt-1 num-tabular break-words" :class="card.texto">{{ pesos(card.valor) }}</p>
           <p class="text-2xs md:text-xs text-text-muted mt-0.5">{{ card.detalle }}</p>
         </button>
       </div>
@@ -57,8 +60,8 @@
             </h3>
             <p class="text-xs text-text-muted mt-0.5">Ordenados por fecha de cobro: la más urgente primero.</p>
           </div>
-          <label v-if="filtroColor !== 'verde'" class="flex items-center gap-2 text-xs font-medium text-text-secondary cursor-pointer select-none">
-            <input v-model="soloSinAvisar" type="checkbox" class="rounded" />
+          <label v-if="filtroColor !== 'verde'" class="flex items-center gap-2 py-2 sm:py-0 text-xs font-medium text-text-secondary cursor-pointer select-none">
+            <input v-model="soloSinAvisar" type="checkbox" class="rounded w-4 h-4" />
             <span>Solo sin avisar</span>
           </label>
         </div>
@@ -77,16 +80,16 @@
                   {{ m.clientes?.nombre }} · <span class="font-mono tracking-wide">{{ m.vehiculos?.placa }}</span>
                 </p>
                 <p class="text-xs text-text-secondary flex flex-wrap gap-x-3">
-                  <a v-if="m.clientes?.telefono" :href="`tel:${m.clientes.telefono}`" class="text-primary font-medium hover:underline">{{ m.clientes.telefono }}</a>
-                  <span>{{ textoEstado(m) }} · vence {{ fechaRelativa(m.fecha_fin) }}</span>
-                  <span class="font-semibold num-tabular">{{ pesos(m.planes_mensuales?.valor) }}</span>
+                  <a v-if="m.clientes?.telefono" :href="`tel:${m.clientes.telefono}`" class="inline-block py-1 text-primary font-medium hover:underline">{{ m.clientes.telefono }}</a>
+                  <span class="py-1">{{ textoEstado(m) }} · vence {{ fechaRelativa(m.fecha_fin) }}</span>
+                  <span class="py-1 font-semibold num-tabular">{{ pesos(m.planes_mensuales?.valor) }}</span>
                 </p>
-                <p class="text-2xs" :class="m.ultimoAviso ? 'text-success' : 'text-text-muted'">{{ textoAviso(m) }}</p>
+                <p class="text-2xs break-words" :class="m.ultimoAviso ? 'text-success' : 'text-text-muted'">{{ textoAviso(m) }}</p>
               </div>
             </div>
-            <div class="flex gap-2 shrink-0">
-              <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" @click="abrirAviso(m)">Marcar avisado</button>
-              <button class="btn-craft-primary text-xs px-3 py-1.5 rounded-lg" @click="irAPagar(m)">Registrar pago</button>
+            <div class="flex gap-2 shrink-0 pl-[1.125rem] md:pl-0">
+              <button class="flex-1 md:flex-none btn-craft-subtle text-xs px-3 py-2.5 md:py-1.5 rounded-lg" @click="abrirAviso(m)">Marcar avisado</button>
+              <button class="flex-1 md:flex-none btn-craft-primary text-xs px-3 py-2.5 md:py-1.5 rounded-lg" @click="irAPagar(m)">Registrar pago</button>
             </div>
           </li>
         </ul>
@@ -94,21 +97,21 @@
 
       <!-- 3. OCUPACIÓN AHORA -->
       <div class="card-craft p-4 md:p-5 space-y-4">
-        <div class="flex items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <h3 class="titulo-seccion">Ocupación ahora · <span class="num-tabular">{{ datos.ocupacionCount }}</span> dentro</h3>
           <div class="flex gap-2">
-            <router-link to="/ocupacion" class="btn-craft-primary text-xs px-3 py-1.5 rounded-lg">Entrada</router-link>
-            <router-link to="/ocupacion" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Salida</router-link>
+            <router-link to="/ocupacion" class="btn-craft-primary text-xs px-3 py-2.5 sm:py-1.5 rounded-lg">Entrada</router-link>
+            <router-link to="/ocupacion" class="btn-craft-subtle text-xs px-3 py-2.5 sm:py-1.5 rounded-lg">Salida</router-link>
           </div>
         </div>
-        <div v-if="datos.ocupacionPorTipo.length" class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div v-if="datos.ocupacionPorTipo.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           <div
             v-for="t in datos.ocupacionPorTipo"
             :key="t.id"
-            class="rounded-lg border p-3"
+            class="rounded-lg border p-3 min-w-0"
             :class="t.sobrecupo || t.ocupados >= t.capacidad ? 'border-warning-border bg-warning-bg' : 'border-border bg-surface-elevated'"
           >
-            <p class="rotulo">{{ t.nombre }}</p>
+            <p class="rotulo truncate">{{ t.nombre }}</p>
             <p class="mt-1 text-xl font-semibold tracking-tight num-tabular" :class="t.sobrecupo ? 'text-warning' : 'text-text-primary'">
               {{ t.ocupados }}<span class="text-sm font-medium text-text-muted">/{{ t.capacidad }}</span>
             </p>
@@ -127,28 +130,28 @@
           Las cifras de ingresos requieren conexión.
         </div>
         <template v-else>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div class="card-craft p-4 md:p-5 space-y-2">
               <p class="rotulo">Ingresos de hoy</p>
-              <p class="text-2xl font-semibold tracking-tight num-tabular">{{ pesos(datos.admin.hoy.total) }}</p>
+              <p class="text-2xl font-semibold tracking-tight num-tabular break-words">{{ pesos(datos.admin.hoy.total) }}</p>
               <div class="text-xs space-y-1 pt-1">
-                <div class="flex justify-between"><span class="text-text-secondary">Parqueo por hora</span><span class="font-semibold num-tabular">{{ pesos(datos.admin.hoy.porHora) }}</span></div>
-                <div class="flex justify-between"><span class="text-text-secondary">Mensualidades</span><span class="font-semibold num-tabular">{{ pesos(datos.admin.hoy.mensualidades) }}</span></div>
+                <div class="flex justify-between gap-2"><span class="text-text-secondary">Parqueo por hora</span><span class="font-semibold num-tabular">{{ pesos(datos.admin.hoy.porHora) }}</span></div>
+                <div class="flex justify-between gap-2"><span class="text-text-secondary">Mensualidades</span><span class="font-semibold num-tabular">{{ pesos(datos.admin.hoy.mensualidades) }}</span></div>
               </div>
             </div>
             <div class="card-craft p-4 md:p-5 space-y-2">
               <p class="rotulo">Hoy por método de pago</p>
               <div v-if="datos.admin.hoy.porMetodo.length" class="text-xs space-y-1">
-                <div v-for="mp in datos.admin.hoy.porMetodo" :key="mp.metodo" class="flex justify-between">
-                  <span class="text-text-secondary">{{ mp.metodo }}<span v-if="mp.es_efectivo" class="text-text-muted"> (efectivo)</span></span>
-                  <span class="font-semibold num-tabular">{{ pesos(mp.total) }}</span>
+                <div v-for="mp in datos.admin.hoy.porMetodo" :key="mp.metodo" class="flex justify-between gap-2">
+                  <span class="text-text-secondary min-w-0 truncate">{{ mp.metodo }}<span v-if="mp.es_efectivo" class="text-text-muted"> (efectivo)</span></span>
+                  <span class="font-semibold num-tabular shrink-0">{{ pesos(mp.total) }}</span>
                 </div>
               </div>
               <p v-else class="text-xs text-text-muted">Sin cobros hoy.</p>
             </div>
-            <div class="card-craft p-4 md:p-5 space-y-2">
+            <div class="card-craft p-4 md:p-5 space-y-2 sm:col-span-2 lg:col-span-1">
               <p class="rotulo">Por cobrar en 7 días</p>
-              <p class="text-2xl font-semibold tracking-tight num-tabular">{{ pesos(datos.porCobrar7Dias) }}</p>
+              <p class="text-2xl font-semibold tracking-tight num-tabular break-words">{{ pesos(datos.porCobrar7Dias) }}</p>
               <p class="text-xs text-text-muted">Vencidas más las que vencen en los próximos 7 días.</p>
             </div>
           </div>
@@ -164,7 +167,7 @@
                 :title="`${formatearFechaCorta(d.fecha)}: ${pesos(d.total)}`"
               ></div>
             </div>
-            <div class="flex justify-between text-2xs text-text-muted num-tabular">
+            <div class="flex justify-between gap-2 text-2xs text-text-muted num-tabular">
               <span>{{ formatearFechaCorta(datos.admin.ingresos30Dias[0]?.fecha) }}</span>
               <span>Máx. {{ pesos(max30) }}</span>
               <span>Hoy</span>
@@ -209,7 +212,7 @@
               v-for="op in medios"
               :key="op.valor"
               type="button"
-              class="text-xs px-2 py-2 rounded-lg border font-medium transition-colors"
+              class="text-xs px-2 py-2.5 rounded-lg border font-medium transition-colors"
               :class="aviso.medio === op.valor ? 'border-primary bg-primary/10 text-primary' : 'border-border text-text-secondary hover:bg-surface-elevated'"
               @click="aviso.medio = op.valor"
             >{{ op.texto }}</button>
@@ -219,10 +222,10 @@
           <label for="aviso-nota" class="etiqueta">Nota (opcional)</label>
           <textarea id="aviso-nota" v-model="aviso.nota" rows="2" class="campo"></textarea>
         </div>
-        <div v-if="aviso.error" class="alerta-error">{{ aviso.error }}</div>
-        <div class="flex gap-2 justify-end pt-1">
-          <button type="button" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" @click="aviso.abierto = false">Cancelar</button>
-          <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="aviso.guardando">
+        <div v-if="aviso.error" class="alerta-error" role="alert">{{ aviso.error }}</div>
+        <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+          <button type="button" class="w-full sm:w-auto btn-craft-subtle text-sm px-4 py-2.5 sm:py-2 rounded-lg" @click="aviso.abierto = false">Cancelar</button>
+          <button type="submit" class="w-full sm:w-auto btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg" :disabled="aviso.guardando">
             {{ aviso.guardando ? 'Guardando…' : 'Guardar aviso' }}
           </button>
         </div>
@@ -255,7 +258,8 @@ const medios = [
   { valor: 'en_persona', texto: 'En persona' },
   { valor: 'mensaje', texto: 'Mensaje' }
 ]
-const aviso = ref({ abierto: false, m: null, medio: 'llamada', nota: '', guardando: false, error: '' })
+const aviso = ref({ abierto: false, m: null, medio: 'llamada', nota: '', guardando: false, error: '', info: '' })
+let temporizadorInfo = null
 
 function pesos(v) {
   return `$${Number(v || 0).toLocaleString('es-CO')}`
@@ -323,26 +327,32 @@ function textoAviso(m) {
   return `Avisado ${fecha} · ${medio}${a.profiles?.nombre ? ' · ' + a.profiles.nombre : ''}`
 }
 
+// Las recargas forzadas (Realtime, botón, tras guardar) pueden solaparse:
+// solo la consulta más reciente actualiza la pantalla.
+let consultaVigente = 0
+
 async function cargar(forzar = false) {
   const pq = authStore.parqueaderoId
   if (!pq || (cargando.value && !forzar)) return
+  const consulta = ++consultaVigente
   cargando.value = true
   error.value = ''
   try {
-    datos.value = await dashboardService.obtenerDatosDashboard(pq, {
+    const resultado = await dashboardService.obtenerDatosDashboard(pq, {
       diasAviso: authStore.diasAviso,
       zonaHoraria: authStore.zonaHoraria,
       esAdmin: authStore.isAdmin
     })
+    if (consulta === consultaVigente) datos.value = resultado
   } catch (e) {
-    error.value = mensajeDeError(e, 'No se pudo cargar el dashboard')
+    if (consulta === consultaVigente) error.value = mensajeDeError(e, 'No se pudo cargar el dashboard')
   } finally {
-    cargando.value = false
+    if (consulta === consultaVigente) cargando.value = false
   }
 }
 
 function abrirAviso(m) {
-  aviso.value = { abierto: true, m, medio: 'llamada', nota: '', guardando: false, error: '' }
+  aviso.value = { abierto: true, m, medio: 'llamada', nota: '', guardando: false, error: '', info: '' }
 }
 
 async function guardarAviso() {
@@ -356,7 +366,11 @@ async function guardarAviso() {
       periodoHasta: aviso.value.m.fecha_fin
     })
     aviso.value.abierto = false
-    if (res.offline) error.value = 'Aviso guardado sin conexión; se sincronizará al volver la red.'
+    if (res.offline) {
+      aviso.value.info = 'Aviso guardado sin conexión; se sincronizará al volver la red.'
+      clearTimeout(temporizadorInfo)
+      temporizadorInfo = setTimeout(() => { aviso.value.info = '' }, 6000)
+    }
     await cargar(true)
   } catch (e) {
     aviso.value.error = mensajeDeError(e, 'No se pudo registrar el aviso')

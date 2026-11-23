@@ -6,7 +6,7 @@
         <p class="subtitulo-pagina">Agenda de vencimientos, calendario de cobros y clientes mensuales.</p>
       </div>
       <button
-        class="btn-craft-primary text-sm px-4 py-2 rounded-lg"
+        class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg"
         :disabled="!conexionStore.isOnline"
         :title="conexionStore.isOnline ? '' : 'Crear una mensualidad requiere conexión'"
         @click="abrirNueva"
@@ -21,7 +21,7 @@
     </div>
 
     <!-- CONTADORES -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
       <button v-for="c in contadores" :key="c.clave" type="button"
         class="card-craft card-interactiva p-3 md:p-4 text-left"
         :class="[c.clase, filtroAgenda === c.clave ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : '']"
@@ -30,16 +30,16 @@
         <p class="rotulo">{{ c.titulo }}</p>
         <p class="mt-1 text-2xl font-semibold tracking-tight num-tabular">{{ c.count }}</p>
       </button>
-      <div class="card-craft p-3 md:p-4 col-span-2 md:col-span-1">
+      <div class="card-craft p-3 md:p-4 col-span-2 lg:col-span-1 min-w-0">
         <p class="rotulo">Esperado 7 días</p>
-        <p class="mt-1 text-xl font-semibold tracking-tight num-tabular">{{ pesos(esperado7Dias) }}</p>
+        <p class="mt-1 text-xl font-semibold tracking-tight num-tabular truncate">{{ pesos(esperado7Dias) }}</p>
       </div>
     </div>
 
     <!-- PESTAÑAS -->
     <div class="flex gap-1 border-b border-border" role="tablist">
       <button v-for="t in pestanas" :key="t.clave" type="button" role="tab"
-        class="px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+        class="px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors"
         :class="pestana === t.clave ? 'border-primary text-primary' : 'border-transparent text-text-muted hover:text-text-primary'"
         :aria-selected="pestana === t.clave"
         @click="pestana = t.clave">{{ t.texto }}</button>
@@ -59,7 +59,7 @@
     <div v-else-if="pestana === 'agenda'" class="space-y-4">
       <p v-if="filtroAgenda" class="text-xs text-text-secondary">
         Mostrando: <span class="font-semibold text-text-primary">{{ contadores.find(c => c.clave === filtroAgenda)?.titulo }}</span>
-        <button class="ml-2 text-primary font-medium hover:underline" @click="filtroAgenda = null">Ver todo</button>
+        <button type="button" class="ml-1 px-2 py-1.5 text-primary font-medium hover:underline" @click="filtroAgenda = null">Ver todo</button>
       </p>
       <template v-for="g in gruposAgenda" :key="g.clave">
         <section v-if="g.items.length" class="card-craft p-4 md:p-5 space-y-2">
@@ -78,12 +78,12 @@
 
     <!-- CALENDARIO -->
     <div v-else-if="pestana === 'calendario'" class="card-craft p-4 md:p-5 space-y-3">
-      <div class="flex items-center justify-between">
-        <button class="btn-icono border border-border" aria-label="Mes anterior" @click="moverMes(-1)">
+      <div class="flex items-center justify-between gap-2">
+        <button type="button" class="btn-icono border border-border" aria-label="Mes anterior" @click="moverMes(-1)">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
         </button>
-        <h3 class="titulo-seccion capitalize">{{ nombreMes }}</h3>
-        <button class="btn-icono border border-border" aria-label="Mes siguiente" @click="moverMes(1)">
+        <h3 class="titulo-seccion capitalize text-center min-w-0 truncate">{{ nombreMes }}</h3>
+        <button type="button" class="btn-icono border border-border" aria-label="Mes siguiente" @click="moverMes(1)">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
         </button>
       </div>
@@ -92,7 +92,7 @@
       </div>
       <div class="grid grid-cols-7 gap-1">
         <button v-for="(celda, i) in celdasMes" :key="i" type="button" :disabled="!celda"
-          class="min-h-[56px] rounded-lg border p-1.5 text-left flex flex-col transition-colors"
+          class="min-h-[56px] min-w-0 overflow-hidden rounded-lg border p-1 sm:p-1.5 text-left flex flex-col transition-colors"
           :class="[
             !celda ? 'border-transparent' : 'border-border hover:border-primary/50',
             celda && celda.items.length ? 'bg-warning-bg' : '',
@@ -125,7 +125,7 @@
           <option value="asc">Vencimiento más próximo</option>
           <option value="desc">Vencimiento más lejano</option>
         </select>
-        <label v-if="authStore.isAdmin" class="flex items-center gap-2 text-xs font-medium text-text-secondary whitespace-nowrap">
+        <label v-if="authStore.isAdmin" class="flex items-center gap-2 py-1.5 text-xs font-medium text-text-secondary whitespace-nowrap cursor-pointer">
           <input v-model="incluirInactivas" type="checkbox" class="rounded" @change="cargarTodas" /> Incluir inactivas
         </label>
       </div>
@@ -154,12 +154,12 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label for="nm-nombre" class="etiqueta">Nombre completo</label><input id="nm-nombre" v-model="nueva.nombre" required class="campo" /></div>
           <div><label for="nm-doc" class="etiqueta">Documento</label><input id="nm-doc" v-model="nueva.documento" required class="campo" /></div>
-          <div><label for="nm-tel" class="etiqueta">Teléfono</label><input id="nm-tel" v-model="nueva.telefono" type="tel" class="campo" /></div>
-          <div><label for="nm-email" class="etiqueta">Email (opcional)</label><input id="nm-email" v-model="nueva.email" type="email" class="campo" /></div>
+          <div><label for="nm-tel" class="etiqueta">Teléfono</label><input id="nm-tel" v-model="nueva.telefono" type="tel" inputmode="tel" autocomplete="off" class="campo" /></div>
+          <div><label for="nm-email" class="etiqueta">Email (opcional)</label><input id="nm-email" v-model="nueva.email" type="email" autocomplete="off" autocapitalize="off" class="campo" /></div>
         </div>
         <p class="rotulo pt-1">Vehículo y plan</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label for="nm-placa" class="etiqueta">Placa</label><input id="nm-placa" v-model="nueva.placa" required placeholder="ABC123" class="campo uppercase font-mono tracking-wider" /></div>
+          <div><label for="nm-placa" class="etiqueta">Placa</label><input id="nm-placa" v-model="nueva.placa" required placeholder="ABC123" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" class="campo uppercase font-mono tracking-wider" /></div>
           <div>
             <label for="nm-tipo" class="etiqueta">Tipo de vehículo</label>
             <select id="nm-tipo" v-model="nueva.tipoVehiculoId" required class="campo" @change="nueva.planId = ''">
@@ -192,9 +192,9 @@
           </select>
         </div>
         <div v-if="nueva.error" class="alerta-error">{{ nueva.error }}</div>
-        <div class="flex gap-2 justify-end pt-1">
-          <button type="button" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" @click="nueva.abierto = false">Cancelar</button>
-          <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="nueva.guardando || !turnoAbierto">
+        <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+          <button type="button" class="btn-craft-subtle w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" @click="nueva.abierto = false">Cancelar</button>
+          <button type="submit" class="btn-craft-primary w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" :disabled="nueva.guardando || !turnoAbierto">
             {{ nueva.guardando ? 'Guardando…' : 'Crear y cobrar' }}
           </button>
         </div>
@@ -206,11 +206,11 @@
       <div class="modal-panel max-w-lg">
         <div class="modal-encabezado items-start">
           <div class="min-w-0">
-            <h3 class="modal-titulo">{{ detalle.m.clientes?.nombre }}</h3>
-            <p class="text-xs text-text-secondary">Doc. {{ detalle.m.clientes?.documento }}</p>
-            <p class="text-xs mt-0.5">
-              <a v-if="detalle.m.clientes?.telefono" :href="`tel:${detalle.m.clientes.telefono}`" class="text-primary font-medium hover:underline">{{ detalle.m.clientes.telefono }}</a>
-              <a v-if="whatsapp(detalle.m)" :href="whatsapp(detalle.m)" target="_blank" rel="noopener" class="ml-3 font-medium text-success hover:underline">WhatsApp</a>
+            <h3 class="modal-titulo break-words">{{ detalle.m.clientes?.nombre }}</h3>
+            <p class="text-xs text-text-secondary break-words">Doc. {{ detalle.m.clientes?.documento }}</p>
+            <p class="text-xs mt-0.5 flex flex-wrap gap-x-1">
+              <a v-if="detalle.m.clientes?.telefono" :href="`tel:${detalle.m.clientes.telefono}`" class="inline-block py-1.5 pr-2 text-primary font-medium num-tabular hover:underline">{{ detalle.m.clientes.telefono }}</a>
+              <a v-if="whatsapp(detalle.m)" :href="whatsapp(detalle.m)" target="_blank" rel="noopener" class="inline-block py-1.5 pr-2 font-medium text-success hover:underline">WhatsApp</a>
             </p>
           </div>
           <div class="flex items-center gap-2 shrink-0">
@@ -220,22 +220,22 @@
             </button>
           </div>
         </div>
-        <dl class="grid grid-cols-2 gap-3 text-xs">
+        <dl class="grid grid-cols-2 gap-3 text-xs [&_dd]:break-words">
           <div><dt class="text-text-muted">Plan</dt><dd class="font-semibold">{{ detalle.m.planes_mensuales?.nombre }} · {{ pesos(detalle.m.planes_mensuales?.valor) }}</dd></div>
           <div><dt class="text-text-muted">Estado</dt><dd class="font-semibold" :class="claseEstado(detalle.m)">{{ textoEstado(detalle.m) }}</dd></div>
           <div><dt class="text-text-muted">Vence / próximo cobro</dt><dd class="font-semibold">{{ formatearFechaCorta(detalle.m.fecha_fin) }}</dd></div>
           <div><dt class="text-text-muted">Día de cobro</dt><dd class="font-semibold">{{ detalle.m.dia_corte }}</dd></div>
         </dl>
         <div v-if="detalle.m.activa !== false" class="flex flex-wrap gap-2">
-          <button class="btn-craft-primary text-xs px-3 py-1.5 rounded-lg" @click="abrirPago(detalle.m)">Registrar pago</button>
-          <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" @click="abrirAviso(detalle.m)">Marcar avisado</button>
-          <button v-if="authStore.isAdmin" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg !text-danger" @click="detalle.confirmarDesactivar = true">Desactivar</button>
+          <button type="button" class="btn-craft-primary text-xs px-3 py-2.5 sm:py-1.5 rounded-lg" @click="abrirPago(detalle.m)">Registrar pago</button>
+          <button type="button" class="btn-craft-subtle text-xs px-3 py-2.5 sm:py-1.5 rounded-lg" @click="abrirAviso(detalle.m)">Marcar avisado</button>
+          <button v-if="authStore.isAdmin" type="button" class="btn-craft-subtle text-xs px-3 py-2.5 sm:py-1.5 rounded-lg !text-danger" @click="detalle.confirmarDesactivar = true">Desactivar</button>
         </div>
         <div v-if="detalle.confirmarDesactivar" class="alerta-error flex-col gap-2">
           <p>¿Desactivar esta mensualidad? El cliente dejará de aparecer en la agenda; sus pagos se conservan.</p>
-          <div class="flex gap-2">
-            <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" @click="detalle.confirmarDesactivar = false">Cancelar</button>
-            <button class="btn-craft-danger text-xs px-3 py-1.5 rounded-lg" @click="desactivar">Sí, desactivar</button>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn-craft-subtle text-xs px-3 py-2.5 sm:py-1.5 rounded-lg" @click="detalle.confirmarDesactivar = false">Cancelar</button>
+            <button type="button" class="btn-craft-danger text-xs px-3 py-2.5 sm:py-1.5 rounded-lg" @click="desactivar">Sí, desactivar</button>
           </div>
         </div>
 
@@ -245,14 +245,14 @@
           <p v-else-if="!detalle.pagos.length" class="text-xs text-text-muted">Sin pagos registrados.</p>
           <ul class="divide-y divide-border-subtle">
             <li v-for="p in detalle.pagos" :key="p.id" class="py-2 text-xs flex flex-wrap items-center justify-between gap-2">
-              <div :class="p.anulado ? 'line-through text-text-muted' : ''">
+              <div class="min-w-0" :class="p.anulado ? 'line-through text-text-muted' : ''">
                 <p class="font-semibold num-tabular">{{ formatearFechaCorta(p.periodo_desde) }} – {{ formatearFechaCorta(p.periodo_hasta) }} · {{ pesos(p.valor) }}</p>
                 <p class="text-text-secondary">{{ p.metodos_pago?.nombre }} · {{ p.profiles?.nombre }}</p>
               </div>
               <span v-if="p.anulado" class="badge-pastel-rose px-2 py-0.5 rounded-full text-2xs" :title="p.motivo_anulacion">Anulado</span>
-              <div v-else class="flex gap-3">
-                <button class="font-medium text-primary hover:underline" @click="descargarComprobantePago(p.id, detalle.m)">Comprobante</button>
-                <button v-if="authStore.isAdmin" class="font-medium text-danger hover:underline" @click="anulacion = { abierto: true, pago: p, motivo: '', error: '', guardando: false }">Anular</button>
+              <div v-else class="flex gap-1">
+                <button type="button" class="px-2 py-2 font-medium text-primary hover:underline" @click="descargarComprobantePago(p.id, detalle.m)">Comprobante</button>
+                <button v-if="authStore.isAdmin" type="button" class="px-2 py-2 font-medium text-danger hover:underline" @click="anulacion = { abierto: true, pago: p, motivo: '', error: '', guardando: false }">Anular</button>
               </div>
             </li>
           </ul>
@@ -261,12 +261,12 @@
         <div class="space-y-1">
           <h4 class="rotulo">Avisos</h4>
           <p v-if="!(detalle.m.avisos_mensualidad || []).length" class="text-xs text-text-muted">Sin avisos registrados.</p>
-          <p v-for="a in avisosOrdenados(detalle.m)" :key="a.id" class="text-xs text-text-secondary">
+          <p v-for="a in avisosOrdenados(detalle.m)" :key="a.id" class="text-xs text-text-secondary break-words">
             {{ formatearFechaHora(a.created_at, authStore.zonaHoraria) }} · {{ textoMedio(a.medio) }}<span v-if="a.profiles?.nombre"> · {{ a.profiles.nombre }}</span><span v-if="a.nota" class="text-text-muted"> — {{ a.nota }}</span>
           </p>
         </div>
-        <div class="flex justify-end pt-1">
-          <button class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" @click="detalle.abierto = false">Cerrar</button>
+        <div class="flex sm:justify-end pt-1">
+          <button type="button" class="btn-craft-subtle w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" @click="detalle.abierto = false">Cerrar</button>
         </div>
       </div>
     </div>
@@ -275,8 +275,8 @@
     <div v-if="anulacion.abierto" class="modal-fondo" @click.self="anulacion.abierto = false">
       <form class="modal-panel max-w-sm" @submit.prevent="anularPago">
         <div class="modal-encabezado">
-          <h3 class="modal-titulo">Anular pago de {{ pesos(anulacion.pago?.valor) }}</h3>
-          <button type="button" class="btn-icono" aria-label="Cerrar" @click="anulacion.abierto = false">
+          <h3 class="modal-titulo min-w-0">Anular pago de <span class="num-tabular">{{ pesos(anulacion.pago?.valor) }}</span></h3>
+          <button type="button" class="btn-icono shrink-0" aria-label="Cerrar" @click="anulacion.abierto = false">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -286,9 +286,9 @@
           <textarea id="an-motivo" v-model="anulacion.motivo" rows="3" minlength="10" required class="campo"></textarea>
         </div>
         <div v-if="anulacion.error" class="alerta-error">{{ anulacion.error }}</div>
-        <div class="flex gap-2 justify-end pt-1">
-          <button type="button" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" @click="anulacion.abierto = false">Cancelar</button>
-          <button type="submit" class="btn-craft-danger text-sm px-4 py-2 rounded-lg" :disabled="anulacion.guardando || anulacion.motivo.trim().length < 10">Anular</button>
+        <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+          <button type="button" class="btn-craft-subtle w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" @click="anulacion.abierto = false">Cancelar</button>
+          <button type="submit" class="btn-craft-danger w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" :disabled="anulacion.guardando || anulacion.motivo.trim().length < 10">Anular</button>
         </div>
       </form>
     </div>
@@ -314,14 +314,14 @@
         </div>
         <div>
           <label for="pg-valor" class="etiqueta">Valor</label>
-          <input v-if="authStore.isAdmin" id="pg-valor" v-model.number="pago.valor" type="number" min="0" step="1" class="campo num-tabular" />
+          <input v-if="authStore.isAdmin" id="pg-valor" v-model.number="pago.valor" type="number" min="0" step="1" inputmode="numeric" class="campo num-tabular" />
           <p v-else class="text-2xl font-semibold tracking-tight num-tabular">{{ pesos(pago.valor) }}</p>
         </div>
         <fieldset v-if="pago.m.clasificacion?.estado === 'vencida'" class="space-y-2 text-xs">
           <legend class="font-semibold text-danger mb-1">La mensualidad está vencida. ¿Desde cuándo se cobra?</legend>
-          <label class="flex items-start gap-2 text-text-secondary"><input v-model="pago.reiniciar" type="radio" :value="false" class="mt-0.5" />
+          <label class="flex items-start gap-2 py-1 text-text-secondary cursor-pointer"><input v-model="pago.reiniciar" type="radio" :value="false" class="mt-0.5" />
             <span>Desde la fecha de vencimiento ({{ formatearFechaCorta(pago.m.fecha_fin) }}); conserva su día de cobro</span></label>
-          <label class="flex items-start gap-2 text-text-secondary"><input v-model="pago.reiniciar" type="radio" :value="true" class="mt-0.5" />
+          <label class="flex items-start gap-2 py-1 text-text-secondary cursor-pointer"><input v-model="pago.reiniciar" type="radio" :value="true" class="mt-0.5" />
             <span>Reiniciar desde hoy; el día de cobro pasa a ser hoy</span></label>
         </fieldset>
         <div>
@@ -332,9 +332,9 @@
           </select>
         </div>
         <div v-if="pago.error" class="alerta-error">{{ pago.error }}</div>
-        <div class="flex gap-2 justify-end pt-1">
-          <button type="button" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" @click="pago.abierto = false">Cancelar</button>
-          <button type="submit" class="btn-craft-success text-sm px-4 py-2 rounded-lg" :disabled="pago.guardando || (conexionStore.isOnline && !turnoAbierto)">
+        <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+          <button type="button" class="btn-craft-subtle w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" @click="pago.abierto = false">Cancelar</button>
+          <button type="submit" class="btn-craft-success w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" :disabled="pago.guardando || (conexionStore.isOnline && !turnoAbierto)">
             {{ pago.guardando ? 'Registrando…' : 'Registrar pago' }}
           </button>
         </div>
@@ -347,7 +347,7 @@
         <div class="modal-encabezado">
           <div class="min-w-0">
             <h3 class="modal-titulo">Marcar avisado</h3>
-            <p class="text-xs text-text-secondary truncate">{{ aviso.m?.clientes?.nombre }} · {{ aviso.m?.vehiculos?.placa }}</p>
+            <p class="text-xs text-text-secondary truncate">{{ aviso.m?.clientes?.nombre }} · <span class="font-mono">{{ aviso.m?.vehiculos?.placa }}</span></p>
           </div>
           <button type="button" class="btn-icono shrink-0" aria-label="Cerrar" @click="aviso.abierto = false">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -357,7 +357,7 @@
           <span class="etiqueta">Medio</span>
           <div class="grid grid-cols-3 gap-2">
             <button v-for="op in medios" :key="op.valor" type="button"
-              class="text-xs px-2 py-2 rounded-lg border font-medium transition-colors"
+              class="text-xs px-2 py-2.5 rounded-lg border font-medium transition-colors"
               :class="aviso.medio === op.valor ? 'border-primary bg-primary/10 text-primary' : 'border-border text-text-secondary hover:bg-surface-elevated'"
               @click="aviso.medio = op.valor">{{ op.texto }}</button>
           </div>
@@ -367,9 +367,9 @@
           <textarea id="av-nota" v-model="aviso.nota" rows="2" class="campo"></textarea>
         </div>
         <div v-if="aviso.error" class="alerta-error">{{ aviso.error }}</div>
-        <div class="flex gap-2 justify-end pt-1">
-          <button type="button" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" @click="aviso.abierto = false">Cancelar</button>
-          <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="aviso.guardando">Guardar aviso</button>
+        <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+          <button type="button" class="btn-craft-subtle w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" @click="aviso.abierto = false">Cancelar</button>
+          <button type="submit" class="btn-craft-primary w-full sm:w-auto text-sm px-4 py-2.5 sm:py-2 rounded-lg" :disabled="aviso.guardando">Guardar aviso</button>
         </div>
       </form>
     </div>
@@ -381,14 +381,14 @@
           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
         </div>
         <h3 class="modal-titulo">{{ resultado.titulo }}</h3>
-        <p class="text-sm text-text-secondary">{{ resultado.detalle }}</p>
+        <p class="text-sm text-text-secondary num-tabular break-words">{{ resultado.detalle }}</p>
         <div v-if="resultado.error" class="alerta-error text-left">{{ resultado.error }}</div>
         <div class="flex flex-col gap-2 pt-1">
-          <button v-if="resultado.pagoId" class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="resultado.generando"
+          <button v-if="resultado.pagoId" type="button" class="btn-craft-primary text-sm px-4 py-2.5 rounded-lg" :disabled="resultado.generando"
             @click="descargarComprobantePago(resultado.pagoId, resultado.m)">
             {{ resultado.generando ? 'Generando…' : 'Descargar comprobante' }}
           </button>
-          <button class="btn-craft-subtle text-sm px-4 py-2 rounded-lg" @click="resultado.abierto = false">Cerrar</button>
+          <button type="button" class="btn-craft-subtle text-sm px-4 py-2.5 rounded-lg" @click="resultado.abierto = false">Cerrar</button>
         </div>
       </div>
     </div>
@@ -497,15 +497,15 @@ const FilaMensualidad = (props) => {
       h('span', { class: `w-2 h-2 rounded-full mt-2 shrink-0 ${puntoColor(m)}` }),
       h('div', { class: 'min-w-0' }, [
         h('p', { class: 'text-sm font-semibold text-text-primary truncate' }, [`${m.clientes?.nombre || ''} · `, h('span', { class: 'font-mono tracking-wide' }, m.vehiculos?.placa || '')]),
-        h('p', { class: 'text-xs text-text-secondary' },
+        h('p', { class: 'text-xs text-text-secondary break-words' },
           `${m.planes_mensuales?.nombre || ''} · ${pesos(m.planes_mensuales?.valor)} · día de cobro ${m.dia_corte} · vence ${formatearFechaCorta(m.fecha_fin)}`),
         h('p', { class: `text-2xs font-medium ${claseEstado(m)}` }, `${textoEstado(m)} · ${textoAviso(m)}`)
       ])
     ]),
-    h('div', { class: 'flex gap-2 shrink-0 items-center' }, [
-      m.clientes?.telefono ? h('a', { href: `tel:${m.clientes.telefono}`, class: 'text-xs text-primary font-medium hover:underline' }, m.clientes.telefono) : null,
-      m.activa !== false ? h('button', { type: 'button', class: 'btn-craft-subtle text-xs px-3 py-1.5 rounded-lg', onClick: () => abrirAviso(m) }, 'Avisado') : null,
-      m.activa !== false ? h('button', { type: 'button', class: 'btn-craft-primary text-xs px-3 py-1.5 rounded-lg', onClick: () => abrirPago(m) }, 'Pagar') : null
+    h('div', { class: 'flex flex-wrap gap-2 shrink-0 items-center pl-[18px] md:pl-0' }, [
+      m.clientes?.telefono ? h('a', { href: `tel:${m.clientes.telefono}`, class: 'py-2 pr-1 text-xs text-primary font-medium num-tabular hover:underline' }, m.clientes.telefono) : null,
+      m.activa !== false ? h('button', { type: 'button', class: 'btn-craft-subtle text-xs px-3 py-2.5 md:py-1.5 rounded-lg', onClick: () => abrirAviso(m) }, 'Avisado') : null,
+      m.activa !== false ? h('button', { type: 'button', class: 'btn-craft-primary text-xs px-3 py-2.5 md:py-1.5 rounded-lg', onClick: () => abrirPago(m) }, 'Pagar') : null
     ])
   ])
 }

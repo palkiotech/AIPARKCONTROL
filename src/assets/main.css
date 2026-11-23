@@ -98,6 +98,8 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -179,11 +181,11 @@
     @apply block text-xs font-medium text-text-secondary mb-1.5;
   }
   .campo {
-    @apply w-full px-3 py-2 text-sm rounded-lg bg-surface border border-border text-text-primary
+    @apply w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm rounded-lg bg-surface border border-border text-text-primary
       placeholder:text-text-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed;
   }
   .campo-sm {
-    @apply px-2.5 py-1.5 text-xs;
+    @apply px-2.5 py-2 sm:py-1.5 text-base sm:text-xs;
   }
 
   /* Botones */
@@ -254,16 +256,18 @@
 
   /* Botón de solo ícono (cerrar modal, etc.) */
   .btn-icono {
-    @apply inline-flex items-center justify-center w-8 h-8 rounded-lg text-text-muted
+    @apply inline-flex items-center justify-center w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex-shrink-0 text-text-muted
       hover:bg-surface-elevated hover:text-text-primary transition-colors;
   }
 
   /* Modales */
   .modal-fondo {
-    @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/50 backdrop-blur-[2px];
+    @apply fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4 bg-slate-950/50 backdrop-blur-[2px];
   }
   .modal-panel {
-    @apply w-full bg-surface border border-border rounded-2xl p-5 space-y-4 max-h-[92vh] overflow-y-auto;
+    @apply w-full bg-surface border border-border rounded-2xl p-5 space-y-4 overflow-y-auto overscroll-contain;
+    max-height: 90vh;
+    max-height: 90dvh;
     box-shadow: var(--sombra-flotante);
   }
   .modal-encabezado {

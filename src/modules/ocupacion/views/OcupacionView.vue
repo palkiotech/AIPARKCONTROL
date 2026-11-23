@@ -10,7 +10,7 @@
       <div class="grid grid-cols-2 sm:flex gap-2">
         <button
           @click="abrirEntrada"
-          class="col-span-2 sm:col-span-1 btn-craft-primary text-sm px-4 py-2 rounded-lg"
+          class="col-span-2 sm:col-span-1 btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -19,13 +19,13 @@
         </button>
         <button
           @click="abrirSalidaPorPlaca"
-          class="btn-craft-subtle text-sm px-4 py-2 rounded-lg"
+          class="btn-craft-subtle text-sm px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg"
         >
           Salida por placa
         </button>
         <button
           @click="abrirEscaner"
-          class="btn-craft-subtle text-sm px-4 py-2 rounded-lg"
+          class="btn-craft-subtle text-sm px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7V5a1 1 0 011-1h2m10 0h2a1 1 0 011 1v2m0 10v2a1 1 0 01-1 1h-2M7 20H5a1 1 0 01-1-1v-2m4-5h8" />
@@ -108,13 +108,18 @@
             <input
               v-model="filtroPlaca"
               type="text"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              aria-label="Buscar por placa"
               placeholder="Buscar por placa..."
-              class="campo campo-sm pl-8 uppercase font-mono tracking-wider"
+              class="campo pl-8 uppercase font-mono tracking-wider"
             />
           </div>
           <select
             v-model="filtroTipo"
-            class="campo campo-sm sm:w-44"
+            aria-label="Filtrar por tipo de vehículo"
+            class="campo sm:w-44"
           >
             <option value="">Todos los tipos</option>
             <option v-for="t in tiposActivos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
@@ -190,9 +195,9 @@
         <!-- Tarjetas (celular) -->
         <div class="sm:hidden divide-y divide-border-subtle">
           <div v-for="v in vehiculosFiltrados" :key="v.id" class="p-4 space-y-2.5">
-            <div class="flex items-center justify-between gap-2">
-              <span class="plate-colombia text-sm" :class="clasePlaca(nombreTipo(v))">{{ v.placa }}</span>
-              <span class="font-semibold text-sm text-text-primary num-tabular">{{ textoEstimado(v) }}</span>
+            <div class="flex items-center justify-between gap-2 min-w-0">
+              <span class="plate-colombia text-sm shrink-0" :class="clasePlaca(nombreTipo(v))">{{ v.placa }}</span>
+              <span class="font-semibold text-sm text-text-primary num-tabular truncate">{{ textoEstimado(v) }}</span>
             </div>
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary">
               <span class="inline-flex items-center gap-1">
@@ -205,13 +210,13 @@
               <span v-if="v.pendiente_sync" class="text-2xs px-2 py-0.5 rounded-full badge-pastel-amber">Pendiente de sincronizar</span>
             </div>
             <div class="flex gap-2">
-              <button @click="abrirCobro(v)" class="flex-1 btn-craft-primary text-sm px-4 py-2 rounded-lg">
+              <button @click="abrirCobro(v)" class="flex-1 btn-craft-primary text-sm px-4 py-2.5 rounded-lg">
                 {{ v.es_mensual ? 'Dar salida' : 'Cobrar' }}
               </button>
               <button
                 v-if="authStore.isAdmin && !v.pendiente_sync"
                 @click="abrirAnular(v)"
-                class="btn-craft-subtle text-sm px-4 py-2 rounded-lg text-danger"
+                class="btn-craft-subtle text-sm px-4 py-2.5 rounded-lg text-danger"
               >
                 Anular
               </button>
@@ -233,12 +238,15 @@
 
         <form @submit.prevent="confirmarEntrada(false)" class="space-y-4">
           <div>
-            <label class="etiqueta">Placa</label>
+            <label for="entrada-placa" class="etiqueta">Placa</label>
             <input
+              id="entrada-placa"
               ref="inputPlaca"
               v-model="modalEntrada.placa"
               type="text"
               autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
               maxlength="10"
               placeholder="ABC123"
               class="campo px-4 py-3 text-2xl text-center uppercase font-mono font-bold tracking-[0.2em]"
@@ -246,7 +254,7 @@
           </div>
 
           <div>
-            <label class="etiqueta">Tipo de vehículo</label>
+            <span class="etiqueta">Tipo de vehículo</span>
             <div class="grid grid-cols-2 gap-2">
               <button
                 v-for="t in tiposActivos"
@@ -257,15 +265,16 @@
                 :class="modalEntrada.tipoId === t.id ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary' : 'border-border text-text-secondary hover:border-primary/50 hover:text-text-primary'"
               >
                 <IconoVehiculo :nombre="t.nombre" clase="w-6 h-6" />
-                <span>{{ t.nombre }}</span>
+                <span class="max-w-full break-words text-center">{{ t.nombre }}</span>
                 <span class="text-2xs font-medium text-text-muted num-tabular">{{ ocupadosTipo(t.id) }}/{{ t.capacidad }}</span>
               </button>
             </div>
           </div>
 
           <div v-if="tarifasDelTipoEntrada.length > 1">
-            <label class="etiqueta">Tarifa</label>
+            <label for="entrada-tarifa" class="etiqueta">Tarifa</label>
             <select
+              id="entrada-tarifa"
               v-model="modalEntrada.tarifaId"
               class="campo"
             >
@@ -283,11 +292,11 @@
             <p class="font-semibold">
               {{ tipoSeleccionado?.nombre }} {{ ocupadosTipo(modalEntrada.tipoId) }}/{{ tipoSeleccionado?.capacidad }}: ya está lleno según la capacidad.
             </p>
-            <div class="flex gap-2 w-full">
-              <button type="button" @click="modalEntrada.avisoCapacidad = false" class="flex-1 btn-craft-subtle text-xs px-3 py-2 rounded-lg">
+            <div class="flex flex-col-reverse sm:flex-row gap-2 w-full">
+              <button type="button" @click="modalEntrada.avisoCapacidad = false" class="flex-1 btn-craft-subtle text-sm sm:text-xs px-3 py-2.5 sm:py-2 rounded-lg">
                 Cancelar
               </button>
-              <button type="button" @click="confirmarEntrada(true)" class="flex-1 btn-craft-primary text-xs px-3 py-2 rounded-lg" :disabled="modalEntrada.guardando">
+              <button type="button" @click="confirmarEntrada(true)" class="flex-1 btn-craft-primary text-sm sm:text-xs px-3 py-2.5 sm:py-2 rounded-lg" :disabled="modalEntrada.guardando">
                 Registrar de todas formas
               </button>
             </div>
@@ -317,7 +326,7 @@
           <p class="text-sm font-semibold text-text-primary">Entrada registrada</p>
           <p v-if="ticket.datos.offline" class="text-xs text-warning">Sin conexión, pendiente de sincronizar</p>
         </div>
-        <span class="plate-colombia text-lg inline-block" :class="clasePlaca(ticket.datos.tipoNombre)">{{ ticket.datos.placa }}</span>
+        <span class="plate-colombia text-lg inline-block max-w-full break-all" :class="clasePlaca(ticket.datos.tipoNombre)">{{ ticket.datos.placa }}</span>
         <p class="text-xs text-text-secondary">{{ ticket.datos.tipoNombre }} · {{ formatearFechaHora(ticket.datos.entrada_at, zona) }}</p>
 
         <p v-if="ticket.datos.es_mensual" class="alerta-exito justify-center">
@@ -329,14 +338,14 @@
         <p v-if="ticket.datos.sobrecupo" class="alerta-aviso justify-center">Registrado en sobrecupo.</p>
 
         <template v-if="ticket.mostrarQR && ticket.qr">
-          <img :src="ticket.qr" alt="QR del ticket" class="mx-auto w-56 h-56 rounded-lg border border-border bg-white p-2" />
+          <img :src="ticket.qr" alt="QR del ticket" class="mx-auto w-full max-w-56 aspect-square rounded-lg border border-border bg-white p-2" />
           <p class="text-xs text-text-muted">El cliente puede tomarle foto al QR para la salida.</p>
-          <button @click="compartirQR" class="w-full btn-craft-subtle text-xs px-3 py-2 rounded-lg">Compartir / descargar QR</button>
+          <button @click="compartirQR" class="w-full btn-craft-subtle text-sm px-3 py-2.5 rounded-lg">Compartir / descargar QR</button>
         </template>
 
-        <div v-if="modoTicket === 'termica'" class="flex gap-2">
-          <button @click="imprimirTicket" class="flex-1 btn-craft-primary text-xs px-3 py-2 rounded-lg">Imprimir ticket</button>
-          <button v-if="!ticket.mostrarQR" @click="ticket.mostrarQR = true" class="flex-1 btn-craft-subtle text-xs px-3 py-2 rounded-lg">Mostrar QR</button>
+        <div v-if="modoTicket === 'termica'" class="flex flex-col sm:flex-row gap-2">
+          <button @click="imprimirTicket" class="flex-1 btn-craft-primary text-sm px-3 py-2.5 rounded-lg">Imprimir ticket</button>
+          <button v-if="!ticket.mostrarQR" @click="ticket.mostrarQR = true" class="flex-1 btn-craft-subtle text-sm px-3 py-2.5 rounded-lg">Mostrar QR</button>
         </div>
         <button @click="cerrarTicket" class="w-full btn-craft-success text-sm px-4 py-2.5 rounded-lg">Listo</button>
       </div>
@@ -368,6 +377,10 @@
           ref="inputPlacaSalida"
           v-model="modalPlaca.placa"
           type="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          aria-label="Placa"
           placeholder="ABC123"
           class="campo px-4 py-3 text-xl text-center uppercase font-mono font-bold tracking-[0.2em]"
         />
@@ -395,11 +408,11 @@
     <div v-if="cobro.abierto" class="modal-fondo no-print">
       <div class="modal-panel max-w-md">
         <div class="modal-encabezado">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 min-w-0">
             <h3 class="modal-titulo">Salida</h3>
-            <span class="plate-colombia text-xs" :class="clasePlaca(nombreTipo(cobro.registro))">{{ cobro.registro.placa }}</span>
+            <span class="plate-colombia text-xs truncate" :class="clasePlaca(nombreTipo(cobro.registro))">{{ cobro.registro.placa }}</span>
           </div>
-          <button type="button" @click="cerrarCobro" class="btn-icono" aria-label="Cerrar">
+          <button type="button" @click="cerrarCobro" class="btn-icono shrink-0" aria-label="Cerrar">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -425,13 +438,14 @@
             </div>
             <div class="p-3 rounded-lg bg-surface-elevated border border-border-subtle">
               <dt class="rotulo">Tarifa</dt>
-              <dd class="font-medium text-text-primary mt-0.5">{{ cobro.cotizacion.es_mensual ? 'Mensualidad vigente' : (cobro.cotizacion.tarifa_nombre || '—') }}</dd>
+              <dd class="font-medium text-text-primary mt-0.5 break-words">{{ cobro.cotizacion.es_mensual ? 'Mensualidad vigente' : (cobro.cotizacion.tarifa_nombre || '—') }}</dd>
             </div>
           </dl>
 
           <div v-if="!cobro.cotizacion.es_mensual && tarifasDelTipoCobro.length > 1">
-            <label class="etiqueta">Cambiar tarifa</label>
+            <label for="cobro-tarifa" class="etiqueta">Cambiar tarifa</label>
             <select
+              id="cobro-tarifa"
               v-model="cobro.tarifaId"
               @change="cotizar"
               class="campo"
@@ -441,7 +455,7 @@
           </div>
 
           <div v-if="(cobro.cotizacion.desglose || []).length > 1" class="text-xs text-text-secondary space-y-1">
-            <p v-for="(d, i) in cobro.cotizacion.desglose" :key="i" class="flex justify-between">
+            <p v-for="(d, i) in cobro.cotizacion.desglose" :key="i" class="flex justify-between gap-2">
               <span>{{ d.tipo === 'nocturna' ? 'Tramo nocturno' : 'Tramo general' }} · {{ formatearDuracion(d.minutos) }}</span>
               <span class="font-medium text-text-primary num-tabular">{{ pesos(d.valor) }}</span>
             </p>
@@ -456,19 +470,19 @@
           <!-- Sin turno no se cobra -->
           <div v-if="cobro.cotizacion.valor > 0 && !turnoAbierto" class="alerta-error flex-col">
             <p class="font-semibold">No hay un turno de caja abierto. Abre el turno para poder cobrar.</p>
-            <router-link to="/caja" class="w-full btn-craft-primary text-xs px-3 py-2 rounded-lg" @click="cerrarCobro">Abrir turno</router-link>
+            <router-link to="/caja" class="w-full btn-craft-primary text-sm px-3 py-2.5 rounded-lg" @click="cerrarCobro">Abrir turno</router-link>
           </div>
 
           <template v-else-if="cobro.cotizacion.valor > 0">
             <div>
-              <label class="etiqueta">Método de pago</label>
+              <span class="etiqueta">Método de pago</span>
               <div class="grid grid-cols-2 gap-2">
                 <button
                   v-for="m in metodosActivos"
                   :key="m.id"
                   type="button"
                   @click="cobro.metodoPagoId = m.id"
-                  class="py-2 px-3 rounded-lg border text-sm font-medium transition-colors"
+                  class="py-2.5 px-3 rounded-lg border text-sm font-medium transition-colors break-words"
                   :class="cobro.metodoPagoId === m.id ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary' : 'border-border text-text-secondary hover:border-primary/50 hover:text-text-primary'"
                 >
                   {{ m.nombre }}
@@ -478,14 +492,16 @@
             </div>
 
             <div v-if="metodoEsEfectivo" class="space-y-2">
-              <label class="etiqueta mb-0">Paga con</label>
+              <label for="cobro-paga-con" class="etiqueta mb-0">Paga con</label>
               <div class="grid grid-cols-5 gap-1.5">
-                <button type="button" @click="cobro.pagaCon = cobro.cotizacion.valor" class="btn-craft-subtle text-xs px-1 py-1.5 rounded-lg">Exacto</button>
-                <button v-for="b in billetes" :key="b" type="button" @click="cobro.pagaCon = b" class="btn-craft-subtle text-xs px-1 py-1.5 rounded-lg num-tabular">${{ b / 1000 }}k</button>
+                <button type="button" @click="cobro.pagaCon = cobro.cotizacion.valor" class="btn-craft-subtle text-xs px-1 py-2.5 sm:py-1.5 rounded-lg">Exacto</button>
+                <button v-for="b in billetes" :key="b" type="button" @click="cobro.pagaCon = b" class="btn-craft-subtle text-xs px-1 py-2.5 sm:py-1.5 rounded-lg num-tabular">${{ b / 1000 }}k</button>
               </div>
               <input
+                id="cobro-paga-con"
                 v-model.number="cobro.pagaCon"
                 type="number"
+                inputmode="numeric"
                 min="0"
                 step="100"
                 placeholder="Valor recibido"
@@ -524,18 +540,18 @@
           </span>
           <p class="text-sm font-semibold text-text-primary">Salida registrada</p>
           <p v-if="salidaOk.datos.offline" class="text-xs text-warning">Pendiente de sincronizar</p>
-          <span class="plate-colombia text-sm inline-block mt-1" :class="clasePlaca(salidaOk.datos.tipoNombre)">{{ salidaOk.datos.placa }}</span>
-          <p class="text-3xl font-semibold tracking-tight num-tabular text-text-primary mt-1">{{ pesos(salidaOk.datos.valor) }}</p>
+          <span class="plate-colombia text-sm inline-block mt-1 max-w-full break-all" :class="clasePlaca(salidaOk.datos.tipoNombre)">{{ salidaOk.datos.placa }}</span>
+          <p class="text-3xl font-semibold tracking-tight num-tabular text-text-primary mt-1 break-words">{{ pesos(salidaOk.datos.valor) }}</p>
           <p class="text-xs text-text-secondary">{{ formatearDuracion(salidaOk.datos.minutos) }}<span v-if="salidaOk.datos.metodo"> · {{ salidaOk.datos.metodo }}</span></p>
           <p v-if="salidaOk.datos.vuelto > 0" class="text-sm font-semibold text-success num-tabular">Vuelto: {{ pesos(salidaOk.datos.vuelto) }}</p>
         </div>
 
         <div v-if="salidaOk.datos.valor > 0" class="space-y-2 pt-3 border-t border-border">
           <p class="rotulo">Comprobante (opcional)</p>
-          <input v-model="salidaOk.clienteNombre" type="text" placeholder="Nombre (Consumidor final)" class="campo" />
-          <input v-model="salidaOk.clienteDocumento" type="text" placeholder="Documento / NIT" class="campo" />
+          <input v-model="salidaOk.clienteNombre" type="text" autocomplete="off" aria-label="Nombre del cliente" placeholder="Nombre (Consumidor final)" class="campo" />
+          <input v-model="salidaOk.clienteDocumento" type="text" autocomplete="off" aria-label="Documento o NIT del cliente" placeholder="Documento / NIT" class="campo" />
           <p v-if="salidaOk.error" class="alerta-error" role="alert">{{ salidaOk.error }}</p>
-          <button @click="generarComprobante" :disabled="salidaOk.generando" class="w-full btn-craft-subtle text-sm px-4 py-2 rounded-lg">
+          <button @click="generarComprobante" :disabled="salidaOk.generando" class="w-full btn-craft-subtle text-sm px-4 py-2.5 rounded-lg">
             {{ salidaOk.generando ? 'Generando...' : (comprobanteProvisional ? 'Comprobante provisional (sin conexión)' : 'Generar comprobante PDF') }}
           </button>
         </div>
@@ -548,15 +564,16 @@
     <div v-if="anular.abierto" class="modal-fondo no-print">
       <form @submit.prevent="confirmarAnular" class="modal-panel max-w-sm space-y-3">
         <div class="modal-encabezado">
-          <h3 class="modal-titulo">Anular registro {{ anular.registro?.placa }}</h3>
-          <button type="button" @click="anular.abierto = false" class="btn-icono" aria-label="Cerrar">
+          <h3 class="modal-titulo min-w-0 break-words">Anular registro {{ anular.registro?.placa }}</h3>
+          <button type="button" @click="anular.abierto = false" class="btn-icono shrink-0" aria-label="Cerrar">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
         <p class="text-sm text-text-secondary">El registro no se borra: queda anulado con el motivo y tu usuario.</p>
         <div>
-          <label class="etiqueta">Motivo</label>
+          <label for="anular-motivo" class="etiqueta">Motivo</label>
           <textarea
+            id="anular-motivo"
             v-model="anular.motivo"
             rows="3"
             placeholder="Motivo (mínimo 10 caracteres)"
@@ -565,9 +582,9 @@
           <p class="text-xs text-text-muted mt-1 num-tabular">{{ anular.motivo.trim().length }}/10 caracteres mínimos</p>
         </div>
         <p v-if="anular.error" class="alerta-error" role="alert">{{ anular.error }}</p>
-        <div class="flex gap-2">
-          <button type="button" @click="anular.abierto = false" class="flex-1 btn-craft-subtle text-sm px-4 py-2 rounded-lg">Cancelar</button>
-          <button type="submit" :disabled="anular.motivo.trim().length < 10 || anular.guardando" class="flex-1 btn-craft-danger text-sm px-4 py-2 rounded-lg">
+        <div class="flex flex-col-reverse sm:flex-row gap-2">
+          <button type="button" @click="anular.abierto = false" class="flex-1 btn-craft-subtle text-sm px-4 py-2.5 sm:py-2 rounded-lg">Cancelar</button>
+          <button type="submit" :disabled="anular.motivo.trim().length < 10 || anular.guardando" class="flex-1 btn-craft-danger text-sm px-4 py-2.5 sm:py-2 rounded-lg">
             {{ anular.guardando ? 'Anulando...' : 'Anular' }}
           </button>
         </div>
@@ -959,10 +976,12 @@ async function abrirEscaner() {
   await nextTick()
   try {
     const { default: QrScanner } = await import('qr-scanner')
+    if (!escaner.abierto) return
     if (!(await QrScanner.hasCamera())) {
       escaner.error = 'Este dispositivo no tiene cámara disponible. Usa "Salida por placa".'
       return
     }
+    if (!escaner.abierto || !videoEscaner.value) return
     instanciaEscaner = new QrScanner(videoEscaner.value, resultado => {
       const id = String(resultado?.data || resultado || '').trim()
       const v = vehiculosDentro.value.find(x => x.id === id)
@@ -974,6 +993,8 @@ async function abrirEscaner() {
       }
     }, { returnDetailedScanResult: true, highlightScanRegion: true })
     await instanciaEscaner.start()
+    // Si el modal se cerró mientras la cámara arrancaba, liberarla
+    if (!escaner.abierto) cerrarEscaner()
   } catch (e) {
     const msg = String(e?.message || e || '')
     escaner.error = msg.toLowerCase().includes('permission') || e?.name === 'NotAllowedError'

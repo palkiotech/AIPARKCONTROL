@@ -9,17 +9,17 @@
     <div v-if="errorMensaje" class="alerta-error" role="alert">{{ errorMensaje }}</div>
 
     <div class="card-craft p-4 sm:p-5 space-y-4">
-      <form class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end" @submit.prevent="cargar">
-        <label><span class="etiqueta">Desde</span><input v-model="desde" type="date" class="campo" /></label>
-        <label><span class="etiqueta">Hasta</span><input v-model="hasta" type="date" class="campo" /></label>
-        <label class="sm:col-span-2"><span class="etiqueta">Buscar (consecutivo o placa)</span><input v-model="busqueda" type="text" placeholder="Ej. 125 o ABC123" class="campo" /></label>
-        <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="cargando || !conexion.isOnline">Buscar</button>
+      <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end" @submit.prevent="cargar">
+        <label class="min-w-0"><span class="etiqueta">Desde</span><input v-model="desde" type="date" class="campo" /></label>
+        <label class="min-w-0"><span class="etiqueta">Hasta</span><input v-model="hasta" type="date" class="campo" /></label>
+        <label class="min-w-0 sm:col-span-2"><span class="etiqueta">Buscar (consecutivo o placa)</span><input v-model="busqueda" type="search" placeholder="Ej. 125 o ABC123" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" class="campo" /></label>
+        <button type="submit" class="btn-craft-primary sm:col-span-2 lg:col-span-1 text-sm px-4 py-2.5 sm:py-2 rounded-lg" :disabled="cargando || !conexion.isOnline">Buscar</button>
       </form>
 
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm pt-3 border-t border-border-subtle">
         <span class="text-text-secondary text-xs font-medium">Formato del PDF</span>
-        <label class="flex items-center gap-1.5 cursor-pointer"><input v-model="formato" type="radio" value="carta" /> Carta</label>
-        <label class="flex items-center gap-1.5 cursor-pointer"><input v-model="formato" type="radio" value="termica" /> Térmica {{ authStore.parqueadero?.ancho_ticket_mm || 80 }} mm</label>
+        <label class="flex items-center gap-1.5 py-1.5 cursor-pointer"><input v-model="formato" type="radio" value="carta" /> Carta</label>
+        <label class="flex items-center gap-1.5 py-1.5 cursor-pointer"><input v-model="formato" type="radio" value="termica" /> Térmica {{ authStore.parqueadero?.ancho_ticket_mm || 80 }} mm</label>
       </div>
     </div>
 
@@ -33,10 +33,10 @@
     </div>
 
     <template v-else>
-      <!-- Tabla en escritorio -->
-      <div class="hidden sm:block card-craft overflow-hidden">
+      <!-- Tabla en tableta y escritorio -->
+      <div class="hidden md:block card-craft overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="tabla">
+          <table class="tabla min-w-[680px]">
             <thead>
               <tr>
                 <th>N°</th>
@@ -52,15 +52,15 @@
               <tr v-for="c in comprobantes" :key="c.id">
                 <td class="font-semibold num-tabular">{{ numero(c.consecutivo) }}</td>
                 <td class="text-text-secondary whitespace-nowrap">{{ fh(c.created_at) }}</td>
-                <td>{{ c.cliente_nombre }}<span v-if="c.cliente_documento" class="text-text-muted"> · {{ c.cliente_documento }}</span></td>
+                <td class="break-words">{{ c.cliente_nombre }}<span v-if="c.cliente_documento" class="text-text-muted"> · {{ c.cliente_documento }}</span></td>
                 <td class="font-mono text-xs font-semibold tracking-wider">{{ c.placa || '—' }}</td>
                 <td class="text-text-secondary">
                   {{ c.origen === 'registro' ? 'Parqueo' : 'Mensualidad' }}
                   <span v-if="c.anulado" class="badge-pastel-rose px-2 py-0.5 rounded-full text-2xs ml-1">Anulado</span>
                 </td>
-                <td class="text-right font-semibold num-tabular">{{ pesos(c.valor) }}</td>
+                <td class="text-right font-semibold num-tabular whitespace-nowrap">{{ pesos(c.valor) }}</td>
                 <td class="text-right">
-                  <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :disabled="descargando === c.id" @click="descargar(c)">
+                  <button type="button" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg whitespace-nowrap" :disabled="descargando === c.id" @click="descargar(c)">
                     {{ descargando === c.id ? 'Generando…' : 'Descargar copia' }}
                   </button>
                 </td>
@@ -71,18 +71,18 @@
       </div>
 
       <!-- Tarjetas en celular -->
-      <div class="sm:hidden space-y-2">
+      <div class="md:hidden space-y-2">
         <div v-for="c in comprobantes" :key="'m' + c.id" class="card-craft p-4 text-sm space-y-1">
-          <div class="flex justify-between">
+          <div class="flex justify-between gap-2">
             <strong class="font-semibold num-tabular">N° {{ numero(c.consecutivo) }}</strong>
-            <strong class="font-semibold num-tabular">{{ pesos(c.valor) }}</strong>
+            <strong class="font-semibold num-tabular shrink-0">{{ pesos(c.valor) }}</strong>
           </div>
-          <p class="text-xs text-text-secondary">{{ fh(c.created_at) }} · {{ c.origen === 'registro' ? 'Parqueo' : 'Mensualidad' }} · {{ c.placa || '—' }}</p>
-          <p class="text-text-primary">{{ c.cliente_nombre }}</p>
-          <div class="flex justify-between items-center pt-2">
+          <p class="text-xs text-text-secondary">{{ fh(c.created_at) }} · {{ c.origen === 'registro' ? 'Parqueo' : 'Mensualidad' }} · <span class="font-mono font-semibold tracking-wider">{{ c.placa || '—' }}</span></p>
+          <p class="text-text-primary break-words">{{ c.cliente_nombre }}<span v-if="c.cliente_documento" class="text-text-muted"> · {{ c.cliente_documento }}</span></p>
+          <div class="flex justify-between items-center gap-2 pt-2">
             <span v-if="c.anulado" class="badge-pastel-rose px-2 py-0.5 rounded-full text-2xs">Anulado</span>
             <span v-else></span>
-            <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :disabled="descargando === c.id" @click="descargar(c)">Descargar copia</button>
+            <button type="button" class="btn-craft-subtle text-xs px-3 py-2.5 rounded-lg" :disabled="descargando === c.id" @click="descargar(c)">{{ descargando === c.id ? 'Generando…' : 'Descargar copia' }}</button>
           </div>
         </div>
       </div>
@@ -100,7 +100,6 @@ import { hoyEnZona, sumarDias, formatearFechaHora } from '@/utils/fecha'
 
 const authStore = useAuthStore()
 const conexion = useConexionStore()
-const claseInput = 'campo'
 
 const hoy = hoyEnZona(authStore.zonaHoraria)
 const desde = ref(sumarDias(hoy, -30))

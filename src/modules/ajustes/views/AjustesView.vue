@@ -31,32 +31,32 @@
       <fieldset :disabled="!conexion.isOnline || guardando" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="etiqueta">Nombre del parqueadero *</label>
-            <input v-model.trim="negocio.nombre" class="campo" :class="{ 'border-danger': erroresNegocio.nombre }" />
+            <label for="neg-nombre" class="etiqueta">Nombre del parqueadero *</label>
+            <input id="neg-nombre" v-model.trim="negocio.nombre" autocomplete="organization" class="campo" :class="{ 'border-danger': erroresNegocio.nombre }" />
             <p v-if="erroresNegocio.nombre" class="err">{{ erroresNegocio.nombre }}</p>
           </div>
           <div>
-            <label class="etiqueta">NIT *</label>
-            <input v-model.trim="negocio.nit" class="campo" :class="{ 'border-danger': erroresNegocio.nit }" />
+            <label for="neg-nit" class="etiqueta">NIT *</label>
+            <input id="neg-nit" v-model.trim="negocio.nit" autocomplete="off" class="campo" :class="{ 'border-danger': erroresNegocio.nit }" />
             <p v-if="erroresNegocio.nit" class="err">{{ erroresNegocio.nit }}</p>
           </div>
           <div>
-            <label class="etiqueta">Dirección</label>
-            <input v-model.trim="negocio.direccion" class="campo" />
+            <label for="neg-direccion" class="etiqueta">Dirección</label>
+            <input id="neg-direccion" v-model.trim="negocio.direccion" autocomplete="street-address" class="campo" />
           </div>
           <div>
-            <label class="etiqueta">Teléfono</label>
-            <input v-model.trim="negocio.telefono" class="campo" />
+            <label for="neg-telefono" class="etiqueta">Teléfono</label>
+            <input id="neg-telefono" v-model.trim="negocio.telefono" type="tel" autocomplete="tel" class="campo" />
           </div>
           <div>
-            <label class="etiqueta">Zona horaria</label>
-            <select v-model="negocio.zona_horaria" class="campo">
+            <label for="neg-zona" class="etiqueta">Zona horaria</label>
+            <select id="neg-zona" v-model="negocio.zona_horaria" class="campo">
               <option v-for="z in ZONAS" :key="z.id" :value="z.id">{{ z.label }}</option>
             </select>
           </div>
           <div>
-            <label class="etiqueta">Moneda</label>
-            <select v-model="negocio.moneda" class="campo">
+            <label for="neg-moneda" class="etiqueta">Moneda</label>
+            <select id="neg-moneda" v-model="negocio.moneda" class="campo">
               <option value="COP">COP · Peso colombiano</option>
               <option value="USD">USD · Dólar</option>
               <option value="PEN">PEN · Sol peruano</option>
@@ -64,28 +64,28 @@
             </select>
           </div>
           <div>
-            <label class="etiqueta">Días de aviso de vencimiento</label>
-            <input v-model.number="negocio.dias_aviso_vencimiento" type="number" min="0" max="60" class="campo" :class="{ 'border-danger': erroresNegocio.dias }" />
+            <label for="neg-dias" class="etiqueta">Días de aviso de vencimiento</label>
+            <input id="neg-dias" v-model.number="negocio.dias_aviso_vencimiento" type="number" inputmode="numeric" min="0" max="60" class="campo" :class="{ 'border-danger': erroresNegocio.dias }" />
             <p v-if="erroresNegocio.dias" class="err">{{ erroresNegocio.dias }}</p>
             <p v-else class="hint">Una mensualidad pasa a "Por vencer" esta cantidad de días antes de su fecha de cobro.</p>
           </div>
           <div class="sm:col-span-2">
-            <label class="etiqueta">Texto del pie del comprobante</label>
-            <textarea v-model="negocio.texto_pie_comprobante" rows="2" class="campo" placeholder="Gracias por su visita..."></textarea>
+            <label for="neg-pie" class="etiqueta">Texto del pie del comprobante</label>
+            <textarea id="neg-pie" v-model="negocio.texto_pie_comprobante" rows="2" class="campo" placeholder="Gracias por su visita..."></textarea>
           </div>
         </div>
 
         <div class="pt-3 border-t border-border">
-          <label class="etiqueta">Logo (PNG o JPG, máximo 1 MB)</label>
+          <label for="neg-logo" class="etiqueta">Logo (PNG o JPG, máximo 1 MB)</label>
           <div class="flex items-center gap-4 flex-wrap">
-            <div class="w-20 h-20 rounded-lg border border-border bg-surface-elevated flex items-center justify-center overflow-hidden">
+            <div class="w-20 h-20 shrink-0 rounded-lg border border-border bg-surface-elevated flex items-center justify-center overflow-hidden">
               <img v-if="logoPreview || negocio.logo_url" :src="logoPreview || negocio.logo_url" alt="Logo del parqueadero" class="max-w-full max-h-full object-contain" />
               <span v-else class="text-2xs text-text-muted">Sin logo</span>
             </div>
-            <div class="space-y-1">
-              <input type="file" accept="image/png,image/jpeg" @change="seleccionarLogo" class="text-xs text-text-secondary file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-solid file:border-border file:bg-surface file:text-text-primary file:text-xs file:font-semibold hover:file:bg-surface-elevated" />
+            <div class="space-y-1 min-w-0 max-w-full">
+              <input id="neg-logo" type="file" accept="image/png,image/jpeg" @change="seleccionarLogo" class="block w-full max-w-full text-xs text-text-secondary file:mr-3 file:px-3 file:py-2 sm:file:py-1.5 file:rounded-lg file:border file:border-solid file:border-border file:bg-surface file:text-text-primary file:text-xs file:font-semibold hover:file:bg-surface-elevated" />
               <p v-if="errorLogo" class="err">{{ errorLogo }}</p>
-              <button v-if="archivoLogo" type="button" @click="subirLogo" :disabled="subiendoLogo" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">
+              <button v-if="archivoLogo" type="button" @click="subirLogo" :disabled="subiendoLogo" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0">
                 {{ subiendoLogo ? 'Subiendo...' : 'Subir logo' }}
               </button>
             </div>
@@ -93,29 +93,29 @@
         </div>
 
         <div class="pt-2">
-          <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">{{ guardando ? 'Guardando...' : 'Guardar datos del negocio' }}</button>
+          <button type="submit" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg w-full sm:w-auto">{{ guardando ? 'Guardando...' : 'Guardar datos del negocio' }}</button>
         </div>
       </fieldset>
     </form>
 
     <!-- 2. TIPOS DE VEHÍCULO (HU-07) -->
     <div v-if="tabActiva === 'tipos'" class="space-y-4">
-      <div class="flex justify-between items-center">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <p class="text-xs text-text-muted">La capacidad informa, no bloquea las entradas.</p>
-        <button @click="editarTipo(null)" :disabled="!conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2 rounded-lg"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo tipo</button>
+        <button @click="editarTipo(null)" :disabled="!conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo tipo</button>
       </div>
       <div class="card-craft divide-y divide-border">
         <div v-if="!tipos.length" class="vacio">No hay tipos de vehículo.</div>
-        <div v-for="t in tipos" :key="t.id" class="p-4 flex items-center justify-between gap-3">
-          <div>
-            <p class="font-semibold text-sm flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0"><IconoVehiculo :nombre="ICONOS_TIPO[t.icono] || t.nombre" clase="w-4 h-4" /></span>{{ t.nombre }}
-              <span v-if="!t.activo" class="badge-pastel-rose text-2xs px-2 py-0.5 rounded-full ml-1">Inactivo</span>
+        <div v-for="t in tipos" :key="t.id" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="font-semibold text-sm flex items-center gap-2"><span class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0"><IconoVehiculo :nombre="ICONOS_TIPO[t.icono] || t.nombre" clase="w-4 h-4" /></span><span class="min-w-0 break-words">{{ t.nombre }}</span>
+              <span v-if="!t.activo" class="badge-pastel-rose text-2xs px-2 py-0.5 rounded-full ml-1 shrink-0">Inactivo</span>
             </p>
             <p class="text-xs text-text-muted pl-10">Capacidad {{ t.capacidad }} · orden {{ t.orden }}</p>
           </div>
-          <div class="flex gap-2">
-            <button @click="editarTipo(t)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Editar</button>
-            <button @click="alternarTipo(t)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :class="t.activo ? 'text-danger' : 'text-success'">
+          <div class="flex gap-2 shrink-0">
+            <button @click="editarTipo(t)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0">Editar</button>
+            <button @click="alternarTipo(t)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0" :class="t.activo ? 'text-danger' : 'text-success'">
               {{ t.activo ? 'Desactivar' : 'Activar' }}
             </button>
           </div>
@@ -126,17 +126,17 @@
     <!-- 3. TARIFAS (HU-08) -->
     <div v-if="tabActiva === 'tarifas'" class="space-y-4">
       <div class="flex flex-col sm:flex-row justify-between gap-3">
-        <select v-model="filtroTipoTarifa" class="campo campo-sm sm:max-w-xs">
+        <select v-model="filtroTipoTarifa" aria-label="Filtrar por tipo de vehículo" class="campo campo-sm sm:max-w-xs">
           <option value="">Todos los tipos</option>
           <option v-for="t in tipos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
         </select>
-        <button @click="editarTarifa(null)" :disabled="!conexion.isOnline || !tiposActivos.length" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">+ Nueva tarifa</button>
+        <button @click="editarTarifa(null)" :disabled="!conexion.isOnline || !tiposActivos.length" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nueva tarifa</button>
       </div>
 
       <div class="card-craft divide-y divide-border">
         <div v-if="!tarifasFiltradas.length" class="vacio">No hay tarifas para este filtro.</div>
         <div v-for="t in tarifasFiltradas" :key="t.id" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
+          <div class="min-w-0 break-words">
             <p class="font-semibold text-sm">{{ t.nombre }}
               <span class="text-xs font-normal text-text-muted">· {{ t.tipos_vehiculo?.nombre }}</span>
             </p>
@@ -148,8 +148,8 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button @click="editarTarifa(t)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Editar</button>
-            <button @click="alternarTarifa(t)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :class="t.activa ? 'text-danger' : 'text-success'">
+            <button @click="editarTarifa(t)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0">Editar</button>
+            <button @click="alternarTarifa(t)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0" :class="t.activa ? 'text-danger' : 'text-success'">
               {{ t.activa ? 'Desactivar' : 'Activar' }}
             </button>
           </div>
@@ -160,29 +160,29 @@
       <div class="card-craft p-5 space-y-3">
         <h3 class="titulo-seccion">Simulador de cobro</h3>
         <p class="text-xs text-text-muted">Usa el mismo cálculo que la salida. Horas en {{ authStore.zonaHoraria }}. Si el tipo tiene tarifa nocturna activa, se aplica en su franja.</p>
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           <div>
-            <label class="etiqueta">Tipo</label>
-            <select v-model="sim.tipoId" class="campo campo-sm">
+            <label for="sim-tipo" class="etiqueta">Tipo</label>
+            <select id="sim-tipo" v-model="sim.tipoId" class="campo campo-sm">
               <option v-for="t in tiposActivos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
             </select>
           </div>
           <div>
-            <label class="etiqueta">Tarifa general</label>
-            <select v-model="sim.tarifaId" class="campo campo-sm">
+            <label for="sim-tarifa" class="etiqueta">Tarifa general</label>
+            <select id="sim-tarifa" v-model="sim.tarifaId" class="campo campo-sm">
               <option v-for="t in tarifasGeneralesSim" :key="t.id" :value="t.id">{{ t.nombre }}</option>
             </select>
           </div>
           <div>
-            <label class="etiqueta">Entrada</label>
-            <input v-model="sim.entrada" type="datetime-local" class="campo campo-sm" />
+            <label for="sim-entrada" class="etiqueta">Entrada</label>
+            <input id="sim-entrada" v-model="sim.entrada" type="datetime-local" class="campo campo-sm" />
           </div>
           <div>
-            <label class="etiqueta">Salida</label>
-            <input v-model="sim.salida" type="datetime-local" class="campo campo-sm" />
+            <label for="sim-salida" class="etiqueta">Salida</label>
+            <input id="sim-salida" v-model="sim.salida" type="datetime-local" class="campo campo-sm" />
           </div>
         </div>
-        <button @click="simularCobro" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">Calcular</button>
+        <button @click="simularCobro" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg w-full sm:w-auto">Calcular</button>
         <p v-if="sim.error" class="err">{{ sim.error }}</p>
         <div v-if="sim.resultado" class="rounded-lg bg-surface-elevated border border-border p-3 text-xs space-y-1">
           <p class="text-base font-bold num-tabular">{{ pesos(sim.resultado.valorTotal) }} <span class="text-xs font-normal text-text-muted">· {{ duracion(sim.resultado.minutosTotal) }}</span></p>
@@ -196,12 +196,12 @@
     <!-- 4. PLANES MENSUALES (HU-09) -->
     <div v-if="tabActiva === 'planes'" class="space-y-4">
       <div class="flex justify-end">
-        <button @click="editarPlan(null)" :disabled="!conexion.isOnline || !tiposActivos.length" class="btn-craft-primary text-sm px-4 py-2 rounded-lg"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo plan</button>
+        <button @click="editarPlan(null)" :disabled="!conexion.isOnline || !tiposActivos.length" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg w-full sm:w-auto"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo plan</button>
       </div>
       <div class="card-craft divide-y divide-border">
         <div v-if="!planes.length" class="vacio">No hay planes mensuales.</div>
         <div v-for="p in planes" :key="p.id" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
+          <div class="min-w-0 break-words">
             <p class="font-semibold text-sm">{{ p.nombre }} <span class="text-xs font-normal text-text-muted">· {{ p.tipos_vehiculo?.nombre }}</span>
               <span v-if="!p.activo" class="badge-pastel-rose text-2xs px-2 py-0.5 rounded-full ml-1">Inactivo</span>
             </p>
@@ -210,8 +210,8 @@
             </p>
           </div>
           <div class="flex gap-2">
-            <button @click="editarPlan(p)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Editar</button>
-            <button @click="alternarPlan(p)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :class="p.activo ? 'text-danger' : 'text-success'">
+            <button @click="editarPlan(p)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0">Editar</button>
+            <button @click="alternarPlan(p)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0" :class="p.activo ? 'text-danger' : 'text-success'">
               {{ p.activo ? 'Desactivar' : 'Activar' }}
             </button>
           </div>
@@ -220,22 +220,22 @@
 
       <div class="card-craft p-5 space-y-3 max-w-2xl">
         <h3 class="titulo-seccion">Simulador de periodos</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
           <div>
-            <label class="etiqueta">Plan</label>
-            <select v-model="simPlan.planId" class="campo campo-sm">
+            <label for="simplan-plan" class="etiqueta">Plan</label>
+            <select id="simplan-plan" v-model="simPlan.planId" class="campo campo-sm">
               <option v-for="p in planes" :key="p.id" :value="p.id">{{ p.nombre }}</option>
             </select>
           </div>
           <div>
-            <label class="etiqueta">Fecha de inicio</label>
-            <input v-model="simPlan.fechaInicio" type="date" class="campo campo-sm" />
+            <label for="simplan-inicio" class="etiqueta">Fecha de inicio</label>
+            <input id="simplan-inicio" v-model="simPlan.fechaInicio" type="date" class="campo campo-sm" />
           </div>
-          <button @click="simularPeriodos" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">Ver próximos 3 periodos</button>
+          <button @click="simularPeriodos" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg sm:col-span-2 lg:col-span-1">Ver próximos 3 periodos</button>
         </div>
         <p v-if="simPlan.error" class="err">{{ simPlan.error }}</p>
         <ul v-if="simPlan.periodos.length" class="text-xs space-y-1">
-          <li v-for="(per, i) in simPlan.periodos" :key="i" class="flex justify-between bg-surface-elevated border border-border rounded-lg px-3 py-2">
+          <li v-for="(per, i) in simPlan.periodos" :key="i" class="flex flex-wrap justify-between gap-x-3 gap-y-0.5 bg-surface-elevated border border-border rounded-lg px-3 py-2">
             <span>Periodo {{ i + 1 }}</span>
             <span class="font-semibold">{{ formatearFechaCorta(per.desde) }} → {{ formatearFechaCorta(per.hasta) }}</span>
           </li>
@@ -245,20 +245,20 @@
 
     <!-- 5. MÉTODOS DE PAGO (HU-06) -->
     <div v-if="tabActiva === 'pagos'" class="space-y-4">
-      <div class="flex justify-between items-center gap-2">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <p class="text-xs text-text-muted">Los métodos marcados como efectivo suman al efectivo esperado del turno. Debe haber al menos uno activo.</p>
-        <button @click="editarMetodo(null)" :disabled="!conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2 rounded-lg"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo método</button>
+        <button @click="editarMetodo(null)" :disabled="!conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>Nuevo método</button>
       </div>
       <div class="card-craft divide-y divide-border">
         <div v-if="!metodos.length" class="vacio">No hay métodos de pago.</div>
-        <div v-for="(m, i) in metodos" :key="m.id" class="p-4 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <div class="flex flex-col">
-              <button @click="moverMetodo(i, -1)" :disabled="i === 0 || !conexion.isOnline || ocupado" class="text-text-muted hover:text-primary disabled:opacity-30 leading-none" aria-label="Subir"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg></button>
-              <button @click="moverMetodo(i, 1)" :disabled="i === metodos.length - 1 || !conexion.isOnline || ocupado" class="text-text-muted hover:text-primary disabled:opacity-30 leading-none" aria-label="Bajar"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg></button>
+        <div v-for="(m, i) in metodos" :key="m.id" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="flex flex-col shrink-0">
+              <button @click="moverMetodo(i, -1)" :disabled="i === 0 || !conexion.isOnline || ocupado" class="w-10 h-10 sm:w-8 sm:h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-primary hover:bg-surface-elevated disabled:opacity-30" aria-label="Subir"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg></button>
+              <button @click="moverMetodo(i, 1)" :disabled="i === metodos.length - 1 || !conexion.isOnline || ocupado" class="w-10 h-10 sm:w-8 sm:h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-primary hover:bg-surface-elevated disabled:opacity-30" aria-label="Bajar"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg></button>
             </div>
-            <div>
-              <p class="font-semibold text-sm">{{ m.nombre }}</p>
+            <div class="min-w-0">
+              <p class="font-semibold text-sm break-words">{{ m.nombre }}</p>
               <div class="flex gap-1 mt-0.5">
                 <span v-if="m.es_efectivo" class="badge-pastel-mint text-2xs px-2 py-0.5 rounded-full">Efectivo</span>
                 <span v-if="!m.activo" class="badge-pastel-rose text-2xs px-2 py-0.5 rounded-full">Inactivo</span>
@@ -266,8 +266,8 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button @click="editarMetodo(m)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Editar</button>
-            <button @click="alternarMetodo(m)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg" :class="m.activo ? 'text-danger' : 'text-success'">
+            <button @click="editarMetodo(m)" :disabled="!conexion.isOnline" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0">Editar</button>
+            <button @click="alternarMetodo(m)" :disabled="!conexion.isOnline || ocupado" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0" :class="m.activo ? 'text-danger' : 'text-success'">
               {{ m.activo ? 'Desactivar' : 'Activar' }}
             </button>
           </div>
@@ -279,12 +279,12 @@
     <div v-if="tabActiva === 'ticket'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <form @submit.prevent="guardarNegocio" class="card-craft p-5 space-y-4">
         <fieldset :disabled="!conexion.isOnline || guardando" class="space-y-4">
-          <div>
-            <label class="etiqueta">Modo de ticket de entrada</label>
+          <div role="radiogroup" aria-labelledby="ticket-modo">
+            <p id="ticket-modo" class="etiqueta">Modo de ticket de entrada</p>
             <div class="grid grid-cols-1 gap-2">
               <label v-for="m in MODOS_TICKET" :key="m.id" class="flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition-colors" :class="negocio.modo_ticket === m.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'">
                 <input type="radio" :value="m.id" v-model="negocio.modo_ticket" class="mt-0.5" />
-                <span>
+                <span class="min-w-0">
                   <span class="block text-sm font-semibold">{{ m.label }}</span>
                   <span class="block text-xs text-text-muted">{{ m.ayuda }}</span>
                 </span>
@@ -292,15 +292,15 @@
             </div>
           </div>
           <div v-if="negocio.modo_ticket === 'termica'">
-            <label class="etiqueta">Ancho del papel</label>
-            <select v-model.number="negocio.ancho_ticket_mm" class="campo">
+            <label for="ticket-ancho" class="etiqueta">Ancho del papel</label>
+            <select id="ticket-ancho" v-model.number="negocio.ancho_ticket_mm" class="campo">
               <option :value="80">80 mm</option>
               <option :value="58">58 mm</option>
             </select>
           </div>
-          <div class="flex gap-2 flex-wrap">
-            <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">{{ guardando ? 'Guardando...' : 'Guardar ticket' }}</button>
-            <button v-if="negocio.modo_ticket === 'termica'" type="button" @click="imprimirPrueba" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg">Imprimir prueba</button>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <button type="submit" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg">{{ guardando ? 'Guardando...' : 'Guardar ticket' }}</button>
+            <button v-if="negocio.modo_ticket === 'termica'" type="button" @click="imprimirPrueba" class="btn-craft-subtle text-sm px-4 py-2.5 sm:py-2 rounded-lg">Imprimir prueba</button>
           </div>
         </fieldset>
       </form>
@@ -310,7 +310,7 @@
         <div v-if="negocio.modo_ticket === 'ninguno'" class="vacio">
           Sin ticket: la salida se hace consultando la placa.
         </div>
-        <div v-else class="mx-auto bg-white text-black font-mono text-2xs p-3 shadow-sm border border-black/10 rounded-sm space-y-1"
+        <div v-else class="mx-auto max-w-full break-words bg-white text-black font-mono text-2xs p-3 shadow-sm border border-black/10 rounded-sm space-y-1"
           :style="{ width: negocio.modo_ticket === 'termica' && negocio.ancho_ticket_mm === 58 ? '200px' : '270px' }">
           <p class="text-center font-bold text-xs">{{ negocio.nombre || 'Parqueadero' }}</p>
           <p class="text-center">NIT {{ negocio.nit || '—' }}</p>
@@ -333,7 +333,8 @@
           v-for="t in TEMAS"
           :key="t.id"
           @click="temaStore.setTheme(t.id)"
-          class="px-3 py-3 rounded-lg border text-sm font-medium transition-colors"
+          :aria-pressed="temaStore.currentTheme === t.id"
+          class="px-2 sm:px-3 py-3 rounded-lg border text-sm font-medium transition-colors"
           :class="temaStore.currentTheme === t.id ? 'border-primary text-primary bg-primary/10' : 'border-border text-text-secondary hover:border-primary/50'"
         >
           {{ t.label }}
@@ -343,32 +344,32 @@
 
     <!-- EDITOR (modal) -->
     <div v-if="editor" class="modal-fondo" @click.self="cerrarEditor">
-      <form @submit.prevent="guardarEditor" class="modal-panel max-w-lg">
+      <form @submit.prevent="guardarEditor" class="modal-panel max-w-lg" role="dialog" aria-modal="true" aria-labelledby="editor-titulo">
         <div class="modal-encabezado">
-          <h3 class="modal-titulo">{{ tituloEditor }}</h3>
-          <button type="button" class="btn-icono" aria-label="Cerrar" @click="cerrarEditor"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+          <h3 id="editor-titulo" class="modal-titulo">{{ tituloEditor }}</h3>
+          <button type="button" class="btn-icono shrink-0" aria-label="Cerrar" @click="cerrarEditor"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
 
         <!-- Tipo de vehículo -->
         <template v-if="editor.clase === 'tipo'">
           <div>
-            <label class="etiqueta">Nombre *</label>
-            <input v-model.trim="editor.datos.nombre" required class="campo" placeholder="Carro, Moto, Camioneta..." />
+            <label for="ed-tipo-nombre" class="etiqueta">Nombre *</label>
+            <input id="ed-tipo-nombre" v-model.trim="editor.datos.nombre" required autocomplete="off" class="campo" placeholder="Carro, Moto, Camioneta..." />
           </div>
-          <div class="grid grid-cols-3 gap-3">
-            <div>
-              <label class="etiqueta">Ícono</label>
-              <select v-model="editor.datos.icono" class="campo">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div class="col-span-2 sm:col-span-1">
+              <label for="ed-tipo-icono" class="etiqueta">Ícono</label>
+              <select id="ed-tipo-icono" v-model="editor.datos.icono" class="campo">
                 <option v-for="(nombreIcono, clave) in ICONOS_TIPO" :key="clave" :value="clave">{{ nombreIcono }}</option>
               </select>
             </div>
             <div>
-              <label class="etiqueta">Capacidad</label>
-              <input v-model.number="editor.datos.capacidad" type="number" min="0" required class="campo" />
+              <label for="ed-tipo-capacidad" class="etiqueta">Capacidad</label>
+              <input id="ed-tipo-capacidad" v-model.number="editor.datos.capacidad" type="number" inputmode="numeric" min="0" required class="campo" />
             </div>
             <div>
-              <label class="etiqueta">Orden</label>
-              <input v-model.number="editor.datos.orden" type="number" min="0" class="campo" />
+              <label for="ed-tipo-orden" class="etiqueta">Orden</label>
+              <input id="ed-tipo-orden" v-model.number="editor.datos.orden" type="number" inputmode="numeric" min="0" class="campo" />
             </div>
           </div>
         </template>
@@ -380,18 +381,18 @@
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="etiqueta">Tipo de vehículo *</label>
-              <select v-model="editor.datos.tipo_vehiculo_id" required class="campo">
+              <label for="ed-tar-tipo" class="etiqueta">Tipo de vehículo *</label>
+              <select id="ed-tar-tipo" v-model="editor.datos.tipo_vehiculo_id" required class="campo">
                 <option v-for="t in tiposActivos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
               </select>
             </div>
             <div>
-              <label class="etiqueta">Nombre *</label>
-              <input v-model.trim="editor.datos.nombre" required class="campo" placeholder="Por hora, Día pleno..." />
+              <label for="ed-tar-nombre" class="etiqueta">Nombre *</label>
+              <input id="ed-tar-nombre" v-model.trim="editor.datos.nombre" required autocomplete="off" class="campo" placeholder="Por hora, Día pleno..." />
             </div>
             <div>
-              <label class="etiqueta">Modalidad *</label>
-              <select v-model="editor.datos.modalidad" class="campo">
+              <label for="ed-tar-modalidad" class="etiqueta">Modalidad *</label>
+              <select id="ed-tar-modalidad" v-model="editor.datos.modalidad" class="campo">
                 <option value="por_hora">Por hora</option>
                 <option value="por_minuto">Por minuto</option>
                 <option value="por_fraccion">Por fracción</option>
@@ -399,41 +400,41 @@
               </select>
             </div>
             <div>
-              <label class="etiqueta">Valor ($) *</label>
-              <input v-model.number="editor.datos.valor" type="number" min="1" step="1" required class="campo" />
+              <label for="ed-tar-valor" class="etiqueta">Valor ($) *</label>
+              <input id="ed-tar-valor" v-model.number="editor.datos.valor" type="number" inputmode="numeric" min="1" step="1" required class="campo num-tabular" />
             </div>
             <div v-if="editor.datos.modalidad === 'por_fraccion'">
-              <label class="etiqueta">Minutos por fracción</label>
-              <input v-model.number="editor.datos.minutos_fraccion" type="number" min="1" max="1440" class="campo" />
+              <label for="ed-tar-fraccion" class="etiqueta">Minutos por fracción</label>
+              <input id="ed-tar-fraccion" v-model.number="editor.datos.minutos_fraccion" type="number" inputmode="numeric" min="1" max="1440" class="campo" />
             </div>
             <template v-if="editor.datos.modalidad !== 'plena'">
               <div>
-                <label class="etiqueta">Minutos de gracia</label>
-                <input v-model.number="editor.datos.minutos_gracia" type="number" min="0" class="campo" />
+                <label for="ed-tar-gracia" class="etiqueta">Minutos de gracia</label>
+                <input id="ed-tar-gracia" v-model.number="editor.datos.minutos_gracia" type="number" inputmode="numeric" min="0" class="campo" />
               </div>
               <div>
-                <label class="etiqueta">Tope por 24 h ($, opcional)</label>
-                <input v-model.number="editor.datos.tope_por_24h" type="number" min="1" class="campo" placeholder="Sin tope" />
+                <label for="ed-tar-tope" class="etiqueta">Tope por 24 h ($, opcional)</label>
+                <input id="ed-tar-tope" v-model.number="editor.datos.tope_por_24h" type="number" inputmode="numeric" min="1" class="campo num-tabular" placeholder="Sin tope" />
               </div>
             </template>
           </div>
-          <label class="flex items-center gap-2 text-sm pt-1">
-            <input type="checkbox" class="rounded" v-model="editor.datos.conFranja" />
+          <label class="flex items-start gap-2 text-sm py-1.5 cursor-pointer">
+            <input type="checkbox" class="rounded mt-0.5 shrink-0" v-model="editor.datos.conFranja" />
             Aplicar solo en una franja horaria (tarifa nocturna)
           </label>
           <div v-if="editor.datos.conFranja" class="grid grid-cols-2 gap-3">
             <div>
-              <label class="etiqueta">Desde</label>
-              <input v-model="editor.datos.franja_inicio" type="time" required class="campo" />
+              <label for="ed-tar-desde" class="etiqueta">Desde</label>
+              <input id="ed-tar-desde" v-model="editor.datos.franja_inicio" type="time" required class="campo" />
             </div>
             <div>
-              <label class="etiqueta">Hasta</label>
-              <input v-model="editor.datos.franja_fin" type="time" required class="campo" />
+              <label for="ed-tar-hasta" class="etiqueta">Hasta</label>
+              <input id="ed-tar-hasta" v-model="editor.datos.franja_fin" type="time" required class="campo" />
             </div>
             <p class="hint col-span-2">Solo puede haber una tarifa con franja activa por tipo. El resto del tiempo se cobra con la tarifa general.</p>
           </div>
-          <label class="flex items-center gap-2 text-sm" :class="{ 'opacity-50': editor.datos.conFranja }">
-            <input type="checkbox" class="rounded" v-model="editor.datos.es_predeterminada" :disabled="editor.datos.conFranja" />
+          <label class="flex items-start gap-2 text-sm py-1.5 cursor-pointer" :class="{ 'opacity-50': editor.datos.conFranja }">
+            <input type="checkbox" class="rounded mt-0.5 shrink-0" v-model="editor.datos.es_predeterminada" :disabled="editor.datos.conFranja" />
             Tarifa predeterminada del tipo (la anterior deja de serlo)
           </label>
         </template>
@@ -442,33 +443,33 @@
         <template v-if="editor.clase === 'plan'">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="etiqueta">Tipo de vehículo *</label>
-              <select v-model="editor.datos.tipo_vehiculo_id" required class="campo">
+              <label for="ed-plan-tipo" class="etiqueta">Tipo de vehículo *</label>
+              <select id="ed-plan-tipo" v-model="editor.datos.tipo_vehiculo_id" required class="campo">
                 <option v-for="t in tiposActivos" :key="t.id" :value="t.id">{{ t.nombre }}</option>
               </select>
             </div>
             <div>
-              <label class="etiqueta">Nombre *</label>
-              <input v-model.trim="editor.datos.nombre" required class="campo" placeholder="Mensual carro" />
+              <label for="ed-plan-nombre" class="etiqueta">Nombre *</label>
+              <input id="ed-plan-nombre" v-model.trim="editor.datos.nombre" required autocomplete="off" class="campo" placeholder="Mensual carro" />
             </div>
             <div>
-              <label class="etiqueta">Valor ($) *</label>
-              <input v-model.number="editor.datos.valor" type="number" min="1" required class="campo" />
+              <label for="ed-plan-valor" class="etiqueta">Valor ($) *</label>
+              <input id="ed-plan-valor" v-model.number="editor.datos.valor" type="number" inputmode="numeric" min="1" required class="campo num-tabular" />
             </div>
             <div>
-              <label class="etiqueta">Tipo de periodo</label>
-              <select v-model="editor.datos.tipo_periodo" class="campo">
+              <label for="ed-plan-periodo" class="etiqueta">Tipo de periodo</label>
+              <select id="ed-plan-periodo" v-model="editor.datos.tipo_periodo" class="campo">
                 <option value="mensual">Mensual (mismo día cada mes)</option>
                 <option value="dias_fijos">Días fijos</option>
               </select>
             </div>
             <div v-if="editor.datos.tipo_periodo === 'dias_fijos'">
-              <label class="etiqueta">Duración (días)</label>
-              <input v-model.number="editor.datos.duracion_dias" type="number" min="1" required class="campo" />
+              <label for="ed-plan-duracion" class="etiqueta">Duración (días)</label>
+              <input id="ed-plan-duracion" v-model.number="editor.datos.duracion_dias" type="number" inputmode="numeric" min="1" required class="campo" />
             </div>
             <div>
-              <label class="etiqueta">Días de gracia para el pago</label>
-              <input v-model.number="editor.datos.dias_gracia_pago" type="number" min="0" class="campo" />
+              <label for="ed-plan-gracia" class="etiqueta">Días de gracia para el pago</label>
+              <input id="ed-plan-gracia" v-model.number="editor.datos.dias_gracia_pago" type="number" inputmode="numeric" min="0" class="campo" />
             </div>
           </div>
           <p class="hint">Los cambios de valor o periodo aplican desde el siguiente pago; no alteran pagos registrados.</p>
@@ -477,24 +478,24 @@
         <!-- Método de pago -->
         <template v-if="editor.clase === 'metodo'">
           <div>
-            <label class="etiqueta">Nombre *</label>
-            <input v-model.trim="editor.datos.nombre" required class="campo" placeholder="Nequi, Daviplata, Tarjeta..." />
+            <label for="ed-met-nombre" class="etiqueta">Nombre *</label>
+            <input id="ed-met-nombre" v-model.trim="editor.datos.nombre" required autocomplete="off" class="campo" placeholder="Nequi, Daviplata, Tarjeta..." />
           </div>
-          <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" class="rounded" v-model="editor.datos.es_efectivo" />
+          <label class="flex items-start gap-2 text-sm py-1.5 cursor-pointer">
+            <input type="checkbox" class="rounded mt-0.5 shrink-0" v-model="editor.datos.es_efectivo" />
             Es efectivo (suma al efectivo esperado del turno)
           </label>
         </template>
 
-        <label v-if="editor.datos.id" class="flex items-center gap-2 text-sm pt-1">
+        <label v-if="editor.datos.id" class="flex items-center gap-2 text-sm py-1.5 cursor-pointer">
           <input type="checkbox" class="rounded" v-model="editor.activo" />
           Activo
         </label>
 
         <p v-if="errorEditor" class="alerta-error" role="alert">{{ errorEditor }}</p>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" @click="cerrarEditor" class="btn-craft-subtle text-sm px-4 py-2 rounded-lg">Cancelar</button>
-          <button type="submit" :disabled="ocupado || !conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2 rounded-lg">{{ ocupado ? 'Guardando...' : 'Guardar' }}</button>
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+          <button type="button" @click="cerrarEditor" class="btn-craft-subtle text-sm px-4 py-2.5 sm:py-2 rounded-lg w-full sm:w-auto">Cancelar</button>
+          <button type="submit" :disabled="ocupado || !conexion.isOnline" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg w-full sm:w-auto">{{ ocupado ? 'Guardando...' : 'Guardar' }}</button>
         </div>
       </form>
     </div>

@@ -20,12 +20,12 @@
     <header class="bg-surface/95 backdrop-blur border-b border-border sticky top-0 z-30 h-14 px-3 md:px-5 flex items-center justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0">
         <!-- Marca -->
-        <div class="flex items-center gap-2.5 md:w-[13.5rem] flex-shrink-0">
+        <div class="flex items-center gap-2.5 lg:w-[13.5rem] flex-shrink-0">
           <svg class="w-8 h-8 flex-shrink-0" viewBox="0 0 32 32" aria-hidden="true">
             <rect width="32" height="32" rx="8" class="fill-primary" />
             <path d="M11 24V8h6.25a4.75 4.75 0 0 1 0 9.5H14.5V24H11zm3.5-9.75h2.6a1.75 1.75 0 0 0 0-3.5h-2.6v3.5z" fill="#fff" />
           </svg>
-          <span class="hidden md:block text-[15px] font-semibold tracking-tight">ParkControl</span>
+          <span class="hidden lg:block text-[15px] font-semibold tracking-tight">ParkControl</span>
         </div>
 
         <div class="hidden md:block w-px h-6 bg-border"></div>
@@ -126,28 +126,29 @@
 
     <div class="flex-1 flex min-h-0" @click="menuUsuario = false">
       <!-- Menú lateral (escritorio) -->
-      <aside class="hidden md:flex flex-col w-60 flex-shrink-0 bg-surface border-r border-border px-3 py-4 gap-5 select-none overflow-y-auto sticky top-14 h-[calc(100vh-3.5rem)]">
+      <aside class="hidden md:flex flex-col w-[4.5rem] lg:w-60 flex-shrink-0 bg-surface border-r border-border px-2 lg:px-3 py-4 gap-5 select-none overflow-y-auto sticky top-14 h-[calc(100vh-3.5rem)]">
         <nav v-for="grupo in gruposMenu" :key="grupo.titulo" class="space-y-0.5">
-          <p class="rotulo px-3 pb-1.5">{{ grupo.titulo }}</p>
+          <p class="rotulo px-3 pb-1.5 hidden lg:block">{{ grupo.titulo }}</p>
           <router-link
             v-for="item in grupo.items"
             :key="item.to"
             :to="item.to"
-            class="relative flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors"
+            class="relative flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 lg:py-2 text-sm rounded-lg transition-colors"
             :class="claseItem(item)"
-            :title="item.requiereRed && !conexionStore.isOnline ? 'Requiere conexión a internet' : ''"
+            :title="item.requiereRed && !conexionStore.isOnline ? 'Requiere conexión a internet' : item.label"
+            :aria-label="item.label"
           >
             <span v-if="esActivo(item)" class="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-primary"></span>
             <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" :d="item.icono" /></svg>
-            <span>{{ item.label }}</span>
+            <span class="hidden lg:inline">{{ item.label }}</span>
           </router-link>
         </nav>
-        <p v-if="!conexionStore.isOnline && !authStore.isSuperadmin" class="mt-auto mx-1 text-2xs text-text-muted leading-relaxed">
+        <p v-if="!conexionStore.isOnline && !authStore.isSuperadmin" class="hidden lg:block mt-auto mx-1 text-2xs text-text-muted leading-relaxed">
           Sin conexión: las opciones atenuadas necesitan internet.
         </p>
       </aside>
 
-      <main class="flex-1 min-w-0 px-4 py-5 md:px-8 md:py-7 pb-24 md:pb-10">
+      <main class="flex-1 min-w-0 px-4 py-5 md:px-8 md:py-7 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-10">
         <div class="mx-auto w-full max-w-6xl">
           <router-view v-slot="{ Component }">
             <keep-alive>
@@ -167,13 +168,13 @@
         v-for="item in barraInferior"
         :key="item.to"
         :to="item.to"
-        class="flex flex-col items-center gap-0.5 py-1.5 text-2xs whitespace-nowrap rounded-lg"
+        class="flex flex-col items-center gap-0.5 py-1.5 text-2xs whitespace-nowrap rounded-lg min-w-0"
         :class="esActivo(item) ? 'text-primary font-semibold' : 'text-text-muted'"
       >
         <span class="flex items-center justify-center w-12 h-7 rounded-full transition-colors" :class="esActivo(item) ? 'bg-primary/10' : ''">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" :d="item.icono" /></svg>
         </span>
-        <span>{{ item.corto || item.label }}</span>
+        <span class="max-w-full truncate px-0.5">{{ item.corto || item.label }}</span>
       </router-link>
       <button
         v-if="masItems.length"
@@ -189,7 +190,7 @@
     </nav>
 
     <div v-if="menuMas" class="md:hidden fixed inset-0 z-20 bg-slate-950/40" @click="menuMas = false">
-      <div class="absolute bottom-[4.75rem] left-3 right-3 bg-surface border border-border rounded-2xl p-2 space-y-0.5" style="box-shadow: var(--sombra-flotante)" @click.stop>
+      <div class="absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-3 right-3 max-h-[60vh] overflow-y-auto bg-surface border border-border rounded-2xl p-2 space-y-0.5" style="box-shadow: var(--sombra-flotante)" @click.stop>
         <router-link
           v-for="item in masItems"
           :key="item.to"
@@ -254,7 +255,7 @@ const gruposMenu = computed(() => {
     items: [
       { to: '/', name: 'dashboard', label: 'Inicio', icono: ICONOS.inicio },
       { to: '/ocupacion', name: 'ocupacion', label: 'Patio de parqueo', corto: 'Ocupación', icono: ICONOS.patio },
-      { to: '/mensualidades', name: 'mensualidades', label: 'Mensualidades', icono: ICONOS.mensual },
+      { to: '/mensualidades', name: 'mensualidades', label: 'Mensualidades', corto: 'Mensual', icono: ICONOS.mensual },
       { to: '/caja', name: 'caja', label: 'Caja y turno', corto: 'Caja', icono: ICONOS.caja },
       { to: '/historial', name: 'historial', label: 'Historial', icono: ICONOS.historial, requiereRed: true }
     ]

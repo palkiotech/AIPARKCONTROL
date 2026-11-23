@@ -64,7 +64,7 @@
               @click="cambiarActivo(u)"
               :disabled="u.es_yo || ocupado === u.id || !conexion.isOnline"
               :title="u.es_yo ? 'No puedes desactivarte a ti mismo' : ''"
-              class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg"
+              class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0"
               :class="u.activo ? '!text-danger' : '!text-success'"
             >
               {{ u.activo ? 'Desactivar' : 'Reactivar' }}
@@ -72,7 +72,7 @@
             <button
               @click="reenviar(u)"
               :disabled="ocupado === u.id || !conexion.isOnline"
-              class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg"
+              class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0"
             >
               Reenviar acceso
             </button>
