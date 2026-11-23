@@ -62,6 +62,9 @@
             v-model="email"
             type="email"
             required
+            autocomplete="email"
+            autocapitalize="off"
+            spellcheck="false"
             class="campo py-2.5"
             placeholder="usuario@parqueadero.com"
           />
@@ -77,8 +80,8 @@
     </template>
 
     <div class="mt-8 pt-5 border-t border-border">
-      <router-link to="/login" class="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+      <router-link to="/login" class="inline-flex items-center gap-1.5 min-h-10 -my-2 text-sm text-primary hover:underline font-medium">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
         Volver a iniciar sesión
       </router-link>
     </div>

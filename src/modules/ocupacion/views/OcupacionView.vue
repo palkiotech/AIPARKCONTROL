@@ -47,19 +47,24 @@
     </div>
 
     <!-- Ocupación por tipo (HU-12) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 no-print">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 no-print">
       <div
         v-for="tipo in resumenOcupacion"
         :key="tipo.id"
-        class="card-craft p-4 sm:p-5"
+        class="card-craft px-3.5 py-3 sm:p-5"
         :class="tipo.ocupados > tipo.capacidad ? 'pastel-card-amber' : ''"
       >
-        <div class="flex justify-between items-start gap-2">
+        <div class="flex justify-between items-center sm:items-start gap-2">
           <div class="flex items-center gap-2 min-w-0">
             <span class="w-8 h-8 rounded-lg bg-surface-elevated border border-border flex items-center justify-center text-text-secondary shrink-0">
               <IconoVehiculo :nombre="tipo.nombre" clase="w-4 h-4" />
             </span>
             <span class="text-sm font-semibold text-text-primary truncate">{{ tipo.nombre }}</span>
+            <!-- En celular el conteo va en la misma línea para dejar la lista de vehículos a la vista -->
+            <span class="sm:hidden text-sm num-tabular shrink-0" :class="tipo.ocupados > tipo.capacidad ? 'text-warning font-semibold' : 'text-text-secondary'">
+              <span class="font-semibold text-text-primary" :class="tipo.ocupados > tipo.capacidad ? 'text-warning' : ''">{{ tipo.ocupados }}</span>/{{ tipo.capacidad }}
+            </span>
+            <span v-if="tipo.mensualesDentro" class="sm:hidden text-2xs text-text-muted shrink-0">· {{ tipo.mensualesDentro }} mens.</span>
           </div>
           <span
             class="text-2xs px-2 py-0.5 rounded-full shrink-0"
@@ -69,15 +74,15 @@
           </span>
         </div>
 
-        <div class="mt-4 flex items-baseline gap-1.5">
+        <div class="mt-4 hidden sm:flex items-baseline gap-1.5">
           <span class="text-3xl font-semibold tracking-tight num-tabular" :class="tipo.ocupados > tipo.capacidad ? 'text-warning' : 'text-text-primary'">{{ tipo.ocupados }}</span>
           <span class="text-sm text-text-muted">/ {{ tipo.capacidad }} cupos</span>
         </div>
-        <p class="mt-0.5 text-xs text-text-secondary">
+        <p class="mt-0.5 hidden sm:block text-xs text-text-secondary">
           {{ tipo.mensualesDentro }} mensual(es) dentro
         </p>
 
-        <div class="mt-3 w-full bg-border h-1.5 rounded-full overflow-hidden">
+        <div class="mt-2.5 sm:mt-3 w-full bg-border h-1.5 rounded-full overflow-hidden">
           <div
             class="h-full rounded-full transition-all duration-500"
             :class="tipo.ocupados > tipo.capacidad ? 'bg-warning' : (tipo.ocupados === tipo.capacidad ? 'bg-danger' : 'bg-success')"

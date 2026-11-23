@@ -503,7 +503,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated, watch } from 'vue'
+import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch } from 'vue'
 import QRCode from 'qrcode'
 import { ajustesService } from '@/modules/ajustes/services/ajustesService'
 import { useAuthStore } from '@/stores/auth'
@@ -653,11 +653,16 @@ const logoPreview = ref('')
 const errorLogo = ref('')
 const subiendoLogo = ref(false)
 
+function liberarPreview() {
+  if (logoPreview.value) URL.revokeObjectURL(logoPreview.value)
+  logoPreview.value = ''
+}
+
 function seleccionarLogo(ev) {
   errorLogo.value = ''
   const f = ev.target.files?.[0]
   archivoLogo.value = null
-  logoPreview.value = ''
+  liberarPreview()
   if (!f) return
   if (!['image/png', 'image/jpeg'].includes(f.type)) {
     errorLogo.value = 'El logo debe ser PNG o JPG'
@@ -987,11 +992,11 @@ function duracion(min) {
 
 watch(pqId, (nuevo) => { if (nuevo) cargarTodo() })
 
-onMounted(() => {
-  cargarTodo()
-  generarQrPrueba()
-})
+// La vista vive en <keep-alive>: onActivated también corre en el primer montaje,
+// así que la carga va solo ahí (antes se cargaba dos veces al entrar).
+onMounted(generarQrPrueba)
 onActivated(cargarTodo)
+onBeforeUnmount(liberarPreview)
 </script>
 
 <style scoped>

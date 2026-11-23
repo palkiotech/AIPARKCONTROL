@@ -12,13 +12,13 @@
       <div class="flex flex-wrap gap-2">
         <button v-for="r in rangosRapidos" :key="r.id" class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0" @click="aplicarRango(r.id)">{{ r.nombre }}</button>
       </div>
-      <form class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end" @submit.prevent="cargar">
-        <label><span class="etiqueta">Desde</span><input v-model="desde" type="date" class="campo" /></label>
-        <label><span class="etiqueta">Hasta</span><input v-model="hasta" type="date" class="campo" /></label>
-        <button type="submit" class="btn-craft-primary text-sm px-4 py-2 rounded-lg" :disabled="cargando || !conexion.isOnline">Consultar</button>
+      <form class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end" @submit.prevent="cargar">
+        <label class="min-w-0"><span class="etiqueta">Desde</span><input v-model="desde" type="date" class="campo" /></label>
+        <label class="min-w-0"><span class="etiqueta">Hasta</span><input v-model="hasta" type="date" class="campo" /></label>
+        <button type="submit" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg" :disabled="cargando || !conexion.isOnline">Consultar</button>
         <div class="flex gap-2">
-          <button type="button" class="btn-craft-subtle text-sm px-3 py-2 rounded-lg flex-1" :disabled="!reporte || exportando" @click="exportarExcel">Excel</button>
-          <button type="button" class="btn-craft-subtle text-sm px-3 py-2 rounded-lg flex-1" :disabled="!reporte || exportando" @click="exportarCSV">CSV</button>
+          <button type="button" class="btn-craft-subtle text-sm px-3 py-2.5 sm:py-2 rounded-lg flex-1" :disabled="!reporte || exportando" @click="exportarExcel">Excel</button>
+          <button type="button" class="btn-craft-subtle text-sm px-3 py-2.5 sm:py-2 rounded-lg flex-1" :disabled="!reporte || exportando" @click="exportarCSV">CSV</button>
         </div>
       </form>
     </div>
@@ -30,17 +30,17 @@
 
     <template v-else-if="reporte">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="card-craft p-5 border-l-4 border-l-primary">
+        <div class="card-craft p-5 border-l-4 border-l-primary min-w-0">
           <p class="rotulo">Total del rango</p>
-          <p class="text-3xl font-semibold tracking-tight num-tabular mt-1">{{ pesos(reporte.gran_total) }}</p>
+          <p class="text-2xl lg:text-3xl font-semibold tracking-tight num-tabular mt-1 break-words">{{ pesos(reporte.gran_total) }}</p>
         </div>
-        <div class="card-craft p-5">
+        <div class="card-craft p-5 min-w-0">
           <p class="rotulo">Parqueo por hora</p>
-          <p class="text-2xl font-semibold tracking-tight num-tabular mt-1">{{ pesos(reporte.total_hora) }}</p>
+          <p class="text-2xl font-semibold tracking-tight num-tabular mt-1 break-words">{{ pesos(reporte.total_hora) }}</p>
         </div>
-        <div class="card-craft p-5">
+        <div class="card-craft p-5 min-w-0">
           <p class="rotulo">Mensualidades</p>
-          <p class="text-2xl font-semibold tracking-tight num-tabular mt-1">{{ pesos(reporte.total_mensualidades) }}</p>
+          <p class="text-2xl font-semibold tracking-tight num-tabular mt-1 break-words">{{ pesos(reporte.total_mensualidades) }}</p>
         </div>
       </div>
 
@@ -49,18 +49,18 @@
         <p v-if="reporte.conflictos_sync">{{ reporte.conflictos_sync }} operación(es) de sincronización con conflicto o error (ver abajo).</p>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="card-craft overflow-hidden">
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="card-craft overflow-hidden min-w-0">
           <h3 class="titulo-seccion px-5 pt-5 pb-3">Por día</h3>
           <div class="overflow-x-auto">
-            <table class="tabla">
+            <table class="tabla min-w-[24rem]">
               <thead><tr><th>Fecha</th><th class="text-right">Hora</th><th class="text-right">Mensual.</th><th class="text-right">Total</th></tr></thead>
               <tbody>
                 <tr v-for="d in reporte.por_dia" :key="d.fecha">
-                  <td class="text-text-secondary">{{ formatearFechaCorta(d.fecha) }}</td>
-                  <td class="text-right num-tabular">{{ pesos(d.hora) }}</td>
-                  <td class="text-right num-tabular">{{ pesos(d.mensualidades) }}</td>
-                  <td class="text-right num-tabular font-semibold">{{ pesos(d.total) }}</td>
+                  <td class="text-text-secondary whitespace-nowrap">{{ formatearFechaCorta(d.fecha) }}</td>
+                  <td class="text-right num-tabular whitespace-nowrap">{{ pesos(d.hora) }}</td>
+                  <td class="text-right num-tabular whitespace-nowrap">{{ pesos(d.mensualidades) }}</td>
+                  <td class="text-right num-tabular font-semibold whitespace-nowrap">{{ pesos(d.total) }}</td>
                 </tr>
                 <tr v-if="!reporte.por_dia.length"><td colspan="4" class="text-text-muted text-xs">Sin ingresos en el rango.</td></tr>
               </tbody>
@@ -68,17 +68,17 @@
           </div>
         </div>
 
-        <div class="card-craft overflow-hidden">
+        <div class="card-craft overflow-hidden min-w-0">
           <h3 class="titulo-seccion px-5 pt-5 pb-3">Por método de pago</h3>
           <div class="overflow-x-auto">
-            <table class="tabla">
+            <table class="tabla min-w-[24rem]">
               <thead><tr><th>Método</th><th class="text-right">Hora</th><th class="text-right">Mensual.</th><th class="text-right">Total</th></tr></thead>
               <tbody>
                 <tr v-for="m in reporte.por_metodo" :key="m.metodo">
                   <td>{{ m.metodo }} <span v-if="m.es_efectivo" class="badge-pastel-mint px-1.5 py-px rounded-full text-2xs">efectivo</span></td>
-                  <td class="text-right num-tabular">{{ pesos(m.hora) }}</td>
-                  <td class="text-right num-tabular">{{ pesos(m.mensualidades) }}</td>
-                  <td class="text-right num-tabular font-semibold">{{ pesos(m.total) }}</td>
+                  <td class="text-right num-tabular whitespace-nowrap">{{ pesos(m.hora) }}</td>
+                  <td class="text-right num-tabular whitespace-nowrap">{{ pesos(m.mensualidades) }}</td>
+                  <td class="text-right num-tabular font-semibold whitespace-nowrap">{{ pesos(m.total) }}</td>
                 </tr>
                 <tr v-if="!reporte.por_metodo.length"><td colspan="4" class="text-text-muted text-xs">Sin cobros.</td></tr>
               </tbody>
@@ -86,19 +86,19 @@
           </div>
         </div>
 
-        <div class="card-craft p-5 text-sm">
+        <div class="card-craft p-5 text-sm min-w-0">
           <h3 class="titulo-seccion mb-2">Por tipo de vehículo (parqueo por hora)</h3>
-          <p v-for="t in reporte.por_tipo" :key="t.tipo" class="flex justify-between border-t border-border-subtle py-2">
-            <span class="text-text-secondary">{{ t.tipo }} <span class="text-text-muted">({{ t.cantidad }})</span></span>
-            <span class="num-tabular font-semibold">{{ pesos(t.total) }}</span>
+          <p v-for="t in reporte.por_tipo" :key="t.tipo" class="flex justify-between gap-3 border-t border-border-subtle py-2">
+            <span class="text-text-secondary min-w-0 break-words">{{ t.tipo }} <span class="text-text-muted">({{ t.cantidad }})</span></span>
+            <span class="num-tabular font-semibold whitespace-nowrap">{{ pesos(t.total) }}</span>
           </p>
           <p v-if="!reporte.por_tipo.length" class="text-text-muted text-xs">Sin salidas cobradas.</p>
         </div>
 
-        <div class="card-craft p-5 text-sm">
+        <div class="card-craft p-5 text-sm min-w-0">
           <h3 class="titulo-seccion mb-2">Por origen</h3>
-          <p v-for="o in reporte.por_origen" :key="o.origen" class="flex justify-between border-t border-border-subtle py-2">
-            <span class="text-text-secondary">{{ o.origen }}</span><span class="num-tabular font-semibold">{{ pesos(o.total) }}</span>
+          <p v-for="o in reporte.por_origen" :key="o.origen" class="flex justify-between gap-3 border-t border-border-subtle py-2">
+            <span class="text-text-secondary min-w-0 break-words">{{ o.origen }}</span><span class="num-tabular font-semibold whitespace-nowrap">{{ pesos(o.total) }}</span>
           </p>
         </div>
       </div>
@@ -107,8 +107,8 @@
         <h3 class="titulo-seccion">Anulados</h3>
         <p class="text-xs text-text-muted mt-0.5 mb-2">No suman en los totales.</p>
         <div v-for="(a, i) in reporte.anulados" :key="i" class="flex flex-wrap justify-between gap-2 border-t border-border-subtle py-2">
-          <span class="text-text-secondary">{{ a.origen === 'registro' ? 'Parqueo' : 'Mensualidad' }}<span v-if="a.placa" class="font-mono"> · {{ a.placa }}</span> · {{ a.fecha ? fh(a.fecha) : '—' }} · {{ a.motivo }}</span>
-          <span class="num-tabular line-through text-text-muted">{{ pesos(a.valor) }}</span>
+          <span class="text-text-secondary min-w-0 break-words">{{ a.origen === 'registro' ? 'Parqueo' : 'Mensualidad' }}<span v-if="a.placa" class="font-mono"> · {{ a.placa }}</span> · {{ a.fecha ? fh(a.fecha) : '—' }} · {{ a.motivo }}</span>
+          <span class="num-tabular line-through text-text-muted whitespace-nowrap">{{ pesos(a.valor) }}</span>
         </div>
         <p v-if="!reporte.anulados.length" class="text-xs text-text-muted">No hay anulaciones en el rango.</p>
       </div>
@@ -116,18 +116,18 @@
 
     <!-- Conflictos de sincronización (HU-26) -->
     <div class="card-craft p-5 text-sm">
-      <div class="flex justify-between items-center gap-3">
+      <div class="flex flex-wrap justify-between items-center gap-3">
         <h3 class="titulo-seccion">Conflictos de sincronización</h3>
         <button class="btn-craft-subtle text-xs px-3 py-1.5 rounded-lg min-h-10 sm:min-h-0" :disabled="!conexion.isOnline" @click="cargarConflictos">Actualizar</button>
       </div>
       <p class="text-xs text-text-muted mt-1 mb-2">Operaciones hechas sin conexión que el servidor no pudo aplicar tal cual. Se aplicó la primera operación; revisa estas y corrige manualmente si hace falta.</p>
       <div v-for="c in conflictos" :key="c.id" class="border-t border-border-subtle py-2.5 space-y-0.5">
         <div class="flex flex-wrap justify-between gap-2">
-          <strong class="font-semibold">{{ tipoOperacion(c.tipo) }}<span v-if="c.payload?.placa" class="font-mono"> · {{ c.payload.placa }}</span></strong>
+          <strong class="font-semibold min-w-0 break-words">{{ tipoOperacion(c.tipo) }}<span v-if="c.payload?.placa" class="font-mono"> · {{ c.payload.placa }}</span></strong>
           <span class="px-2 py-0.5 rounded-full text-2xs" :class="c.resultado === 'error' ? 'badge-pastel-rose' : 'badge-pastel-amber'">{{ c.resultado }}</span>
         </div>
-        <p class="text-xs text-text-secondary">{{ fh(c.creada_en_dispositivo_at) }} (dispositivo) · {{ c.profiles?.nombre || '—' }}</p>
-        <p class="text-xs text-danger">{{ c.detalle }}</p>
+        <p class="text-xs text-text-secondary break-words">{{ fh(c.creada_en_dispositivo_at) }} (dispositivo) · {{ c.profiles?.nombre || '—' }}</p>
+        <p class="text-xs text-danger break-words">{{ c.detalle }}</p>
       </div>
       <p v-if="!conflictos.length" class="text-xs text-text-muted">Sin conflictos.</p>
     </div>
@@ -135,7 +135,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onActivated } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useConexionStore } from '@/stores/conexion'
 import { reportesService } from '@/modules/reportes/services/reportesService'
@@ -145,7 +145,6 @@ import { hoyEnZona, sumarDias, formatearFechaHora, formatearFechaCorta } from '@
 
 const authStore = useAuthStore()
 const conexion = useConexionStore()
-const claseInput = 'campo'
 
 const hoy = hoyEnZona(authStore.zonaHoraria)
 const desde = ref(hoy)
@@ -279,7 +278,9 @@ async function exportarCSV() {
   }
 }
 
-onMounted(() => {
+// Vista en <keep-alive>: onActivated corre en el primer montaje y al volver,
+// así el reporte y los conflictos no quedan desactualizados.
+onActivated(() => {
   cargar()
   cargarConflictos()
 })

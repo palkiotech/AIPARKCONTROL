@@ -7,7 +7,7 @@
       </div>
 
       <div v-if="errorMensaje" class="alerta-error" role="alert">
-        <svg class="w-4 h-4 flex-shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="w-4 h-4 flex-shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span>{{ errorMensaje }}</span>
@@ -27,15 +27,17 @@
           type="email"
           required
           autocomplete="email"
+          autocapitalize="off"
+          spellcheck="false"
           class="campo py-2.5"
           placeholder="usuario@parqueadero.com"
         />
       </div>
 
       <div>
-        <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center justify-between gap-2 mb-1.5">
           <label for="login-pass" class="text-xs font-medium text-text-secondary">Contraseña</label>
-          <router-link to="/recuperar" class="text-xs font-medium text-primary hover:underline">
+          <router-link to="/recuperar" class="inline-flex items-center min-h-10 -my-3 pl-2 text-xs font-medium text-primary hover:underline text-right">
             ¿Olvidaste tu contraseña?
           </router-link>
         </div>
@@ -73,6 +75,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useConexionStore } from '@/stores/conexion'
 import { rutaInicioPorRol } from '@/router'
+import { mensajeDeError } from '@/lib/sesionCaches'
 
 const router = useRouter()
 const route = useRoute()
@@ -102,7 +105,7 @@ async function handleLogin() {
     await authStore.login(email.value, password.value)
     redirigir()
   } catch (err) {
-    errorMensaje.value = err.message || 'Error al iniciar sesión'
+    errorMensaje.value = mensajeDeError(err, 'Error al iniciar sesión')
   } finally {
     cargando.value = false
   }
