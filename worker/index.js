@@ -9,16 +9,19 @@ export default {
     return env.ASSETS.fetch(request)
   },
   async scheduled(event, env, ctx) {
-    if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    // Acepta los nombres del worker o los mismos VITE_* del build
+    const url = env.SUPABASE_URL || env.VITE_SUPABASE_URL
+    const clave = env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY
+    if (!url || !clave) {
       console.error('keep_alive: faltan SUPABASE_URL o SUPABASE_ANON_KEY en las variables del worker')
       return
     }
-    const headers = { apikey: env.SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }
+    const headers = { apikey: clave, 'Content-Type': 'application/json' }
     // La clave anon clásica es un JWT y puede ir como Bearer; la nueva
     // (sb_publishable_…) no es JWT y solo se envía en el encabezado apikey.
-    if (env.SUPABASE_ANON_KEY.startsWith('eyJ')) headers.Authorization = `Bearer ${env.SUPABASE_ANON_KEY}`
+    if (clave.startsWith('eyJ')) headers.Authorization = `Bearer ${clave}`
     ctx.waitUntil(
-      fetch(`${env.SUPABASE_URL}/rest/v1/rpc/keep_alive`, { method: 'POST', headers, body: '{}' })
+      fetch(`${url}/rest/v1/rpc/keep_alive`, { method: 'POST', headers, body: '{}' })
         .then((r) => { if (!r.ok) console.error(`keep_alive respondió ${r.status}`) })
         .catch((e) => console.error('keep_alive falló:', e.message))
     )

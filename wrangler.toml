@@ -1,4 +1,4 @@
-name = "parkcontrol"
+name = "aiparkcontrol"
 main = "worker/index.js"
 compatibility_date = "2026-11-01"
 
