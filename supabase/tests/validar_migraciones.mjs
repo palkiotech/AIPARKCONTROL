@@ -168,6 +168,16 @@ const c2 = await como(OP, async () => (await q(`select public.crear_comprobante(
 check('comprobante idempotente por origen', c1.consecutivo === 1 && c2.consecutivo === 1 && c2.existente === true)
 const det = await como(AD, async () => (await q(`select public.obtener_detalle_comprobante($1) r`, [c1.comprobante_id]))[0].r)
 check('detalle real de comprobante', det.detalle.placa === 'XYZ987' && det.detalle.metodo_pago === 'Efectivo', JSON.stringify(det.detalle))
+check('comprobante conserva el desglose del cobro', Array.isArray(det.detalle.desglose) && det.detalle.desglose[0]?.valor === 6000, JSON.stringify(det.detalle.desglose))
+const snap = (await q(`select tarifa_snapshot s, tarifa_id from public.registros where id=$1`, [ent.registro_id]))[0]
+check('snapshot de tarifa compacto con los parámetros del cobro',
+  snap.s.general.modalidad === 'por_hora' && snap.s.general.valor === 3000 && !('parqueadero_id' in snap.s.general) &&
+  !('created_at' in snap.s.general) && !('nocturna' in snap.s) && snap.s.desglose.length === 1 && !!snap.tarifa_id,
+  JSON.stringify(snap))
+const viejo = { general: { id: 'x', created_at: 't', parqueadero_id: 'p', nombre: 'N', modalidad: 'plena', valor: 1, minutos_gracia: 0, minutos_fraccion: 15, tope_por_24h: null, activa: true }, nocturna: null, desglose: [{ tipo: 'general', minutos: 5, valor: 1 }] }
+const esperado = { general: { valor: 1, nombre: 'N', modalidad: 'plena', minutos_gracia: 0, minutos_fraccion: 15 }, desglose: viejo.desglose }
+const compacto = (await q(`select public.compactar_snapshot_tarifa($1::jsonb) = $2::jsonb igual, public.compactar_snapshot_tarifa($1::jsonb) c`, [JSON.stringify(viejo), JSON.stringify(esperado)]))[0]
+check('compactar snapshot viejo conserva cobro y desglose', compacto.igual, JSON.stringify(compacto.c))
 const lista = await como(AD, async () => (await q(`select public.listar_comprobantes(null,null,'xyz') r`))[0].r)
 check('listar comprobantes busca por placa', lista.length === 1)
 

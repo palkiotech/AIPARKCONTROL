@@ -52,6 +52,7 @@ Node 22. There is no linter. `.env` needs `VITE_SUPABASE_URL` and `VITE_SUPABASE
 - Modes: `por_minuto | por_hora | por_fraccion | plena`.
 - If you change a rule, change both sides and the tests on both sides (`cobro.test.js` and `supabase/tests/validar_migraciones.mjs`).
 - `calcular_cobro(registro_id)` quotes a charge. `registrar_salida` computes the value itself and ignores client values, except for synced offline exits (`p_salida_dispositivo` set). In that case it keeps the amount actually charged and sets `requiere_revision` when it differs from `valor_servidor`.
+- `registros.tarifa_snapshot` is stored compact by `compactar_snapshot_tarifa`: the rule parameters of the general and night tariffs plus `desglose`, with no ids, timestamps or nulls. The general tariff id lives in `tarifa_id`. This keeps the DB small on the Free plan, so do not store whole rows (`to_jsonb(tarifa)`) in per-registro columns.
 - A valid `mensualidad` (until `fecha_fin` + `dias_gracia_pago`) exits at $0.
 - Any charge > 0 requires an open `turnos_caja` shift. Shifts are never auto-opened.
 - Every online entry (`registrar_entrada`) requires an open shift and an active general tariff for the vehicle type. Synced offline entries are accepted anyway, because the vehicle is already inside. `RegistroView` blocks both cases before sending.
