@@ -15,6 +15,12 @@ const routes = [
         meta: { requiresAuth: true, roles: ['admin', 'operador'] }
       },
       {
+        path: 'registro',
+        name: 'registro',
+        component: () => import('@/modules/ocupacion/views/RegistroView.vue'),
+        meta: { requiresAuth: true, roles: ['admin', 'operador'] }
+      },
+      {
         path: 'ocupacion',
         name: 'ocupacion',
         component: () => import('@/modules/ocupacion/views/OcupacionView.vue'),
@@ -104,7 +110,7 @@ const router = createRouter({
 export function rutaInicioPorRol(authStore) {
   if (authStore.isSuperadmin) return { name: 'superadmin' }
   if (authStore.isAdmin) return { name: 'dashboard' }
-  return { name: 'ocupacion' }
+  return { name: 'registro' }
 }
 
 // Guards de navegación por rol y autenticación (HU-02, HU-04, HU-05)

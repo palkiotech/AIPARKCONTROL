@@ -235,6 +235,7 @@ let ultimaConsultaTurno = 0
 const ICONOS = {
   inicio: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
   patio: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4',
+  ocupacion: 'M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10-3a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1v-7z',
   historial: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
   mensual: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
   caja: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
@@ -254,7 +255,8 @@ const gruposMenu = computed(() => {
     titulo: 'Operación',
     items: [
       { to: '/', name: 'dashboard', label: 'Inicio', icono: ICONOS.inicio },
-      { to: '/ocupacion', name: 'ocupacion', label: 'Patio de parqueo', corto: 'Ocupación', icono: ICONOS.patio },
+      { to: '/registro', name: 'registro', label: 'Registro y cobro', corto: 'Registro', icono: ICONOS.patio },
+      { to: '/ocupacion', name: 'ocupacion', label: 'Ocupación', icono: ICONOS.ocupacion },
       { to: '/mensualidades', name: 'mensualidades', label: 'Mensualidades', corto: 'Mensual', icono: ICONOS.mensual },
       { to: '/caja', name: 'caja', label: 'Caja y turno', corto: 'Caja', icono: ICONOS.caja },
       { to: '/historial', name: 'historial', label: 'Historial', icono: ICONOS.historial, requiereRed: true }
@@ -276,7 +278,7 @@ const gruposMenu = computed(() => {
 })
 
 const todosItems = computed(() => gruposMenu.value.flatMap(g => g.items))
-const BARRA = ['dashboard', 'ocupacion', 'mensualidades', 'caja']
+const BARRA = ['dashboard', 'registro', 'ocupacion', 'caja']
 const barraInferior = computed(() => authStore.isSuperadmin
   ? todosItems.value
   : todosItems.value.filter(i => BARRA.includes(i.name)))

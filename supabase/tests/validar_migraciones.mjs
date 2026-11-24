@@ -123,13 +123,20 @@ const tiposA = (await q(`select id from public.tipos_vehiculo where parqueadero_
 const efectivoA = (await q(`select id from public.metodos_pago where parqueadero_id=$1`, [pqA]))[0].id
 
 console.log('\n== Patio y caja')
-await esperaError('salida sin turno con valor > 0 falla', () => como(OP, async () => {
-  const e = (await q(`select public.registrar_entrada(null,'abc-123',$1) r`, [tiposA[0]]))[0].r
-  await db.exec('reset role')
-  await q(`update public.registros set entrada_at = now() - interval '70 minutes' where id=$1`, [e.registro_id])
-  await db.exec(`set role authenticated`)
-  return q(`select public.registrar_salida($1,$2) r`, [e.registro_id, efectivoA])
-}), 'turno')
+await esperaError('entrada en línea sin turno abierto falla', () => como(OP, () => q(`select public.registrar_entrada(null,'ABC123',$1)`, [tiposA[0]])), 'turno de caja abierto')
+
+// Una entrada sin conexión que se sincroniza sin turno se conserva (el vehículo ya está dentro)
+const offSinTurno = '33333333-3333-4333-8333-333333333333'
+await como(OP, () => q(`select public.sincronizar_operaciones($1::jsonb)`, [JSON.stringify([{ id: offSinTurno, tipo: 'entrada', payload: { placa: 'ABC123', tipoVehiculoId: tiposA[0] }, creada_en_dispositivo_at: new Date(Date.now() - 70 * 60e3).toISOString() }])]))
+check('entrada sincronizada sin turno se conserva', (await q(`select count(*)::int n from public.registros where id=$1 and estado='abierto'`, [offSinTurno]))[0].n === 1)
+await esperaError('salida sin turno con valor > 0 falla', () => como(OP, () => q(`select public.registrar_salida($1,$2) r`, [offSinTurno, efectivoA])), 'turno')
+
+const turno = await como(OP, async () => (await q(`select public.abrir_turno(10000) r`))[0].r)
+check('abrir turno', turno.success)
+await esperaError('no se abren dos turnos', () => como(OP, () => q(`select public.abrir_turno(0)`)), 'Ya hay un turno')
+
+const tipoSinTarifa = (await q(`insert into public.tipos_vehiculo(parqueadero_id,nombre,icono,capacidad,orden) values ($1,'Bicicleta','bike',5,3) returning id`, [pqA]))[0].id
+await esperaError('entrada de un tipo sin tarifa activa falla', () => como(OP, () => q(`select public.registrar_entrada(null,'BIC001',$1)`, [tipoSinTarifa])), 'no tiene una tarifa activa')
 
 const ent = await como(OP, async () => (await q(`select public.registrar_entrada(null,'XYZ987',$1) r`, [tiposA[0]]))[0].r)
 check('entrada en línea usa hora del servidor', ent.hora_origen === 'servidor', JSON.stringify(ent))
@@ -142,10 +149,6 @@ await como(OP, async () => {
 })
 const regRow = (await q(`select valor, estado from public.registros where id=$1`, [ent.registro_id]))[0]
 check('operador NO puede editar/borrar registros directo', regRow && regRow.estado === 'abierto' && regRow.valor === 0, JSON.stringify(regRow))
-
-const turno = await como(OP, async () => (await q(`select public.abrir_turno(10000) r`))[0].r)
-check('abrir turno', turno.success)
-await esperaError('no se abren dos turnos', () => como(OP, () => q(`select public.abrir_turno(0)`)), 'Ya hay un turno')
 
 await q(`update public.registros set entrada_at = now() - interval '70 minutes' where id=$1`, [ent.registro_id])
 const cot = await como(OP, async () => (await q(`select public.calcular_cobro($1) r`, [ent.registro_id]))[0].r)

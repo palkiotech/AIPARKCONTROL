@@ -54,6 +54,8 @@ Node 22. There is no linter. `.env` needs `VITE_SUPABASE_URL` and `VITE_SUPABASE
 - `calcular_cobro(registro_id)` quotes a charge. `registrar_salida` computes the value itself and ignores client values, except for synced offline exits (`p_salida_dispositivo` set). In that case it keeps the amount actually charged and sets `requiere_revision` when it differs from `valor_servidor`.
 - A valid `mensualidad` (until `fecha_fin` + `dias_gracia_pago`) exits at $0.
 - Any charge > 0 requires an open `turnos_caja` shift. Shifts are never auto-opened.
+- Every online entry (`registrar_entrada`) requires an open shift and an active general tariff for the vehicle type. Synced offline entries are accepted anyway, because the vehicle is already inside. `RegistroView` blocks both cases before sending.
+- The patio has two views sharing `usePatio()`. `RegistroView` (`/registro`, home for operadores) handles entry and exit/charge. `OcupacionView` (`/ocupacion`) is read-only status plus admin annul, and sends `?salida=<registro_id>` to `RegistroView` to charge.
 
 ### Offline-first
 - `src/offline/cola.js` queues ops in IndexedDB with client UUIDs: `entrada`, `salida`, `pago_mensualidad`, `aviso`. `sync.js` sends them to the idempotent RPC `sincronizar_operaciones`, which logs every op in `operaciones_sync`; conflicts are reviewed in Reportes. Sync retries with backoff and runs on `online`.

@@ -100,8 +100,8 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h3 class="titulo-seccion">Ocupación ahora · <span class="num-tabular">{{ datos.ocupacionCount }}</span> dentro</h3>
           <div class="flex gap-2">
-            <router-link to="/ocupacion" class="btn-craft-primary text-xs px-3 py-2.5 sm:py-1.5 rounded-lg">Entrada</router-link>
-            <router-link to="/ocupacion" class="btn-craft-subtle text-xs px-3 py-2.5 sm:py-1.5 rounded-lg">Salida</router-link>
+            <router-link to="/registro" class="btn-craft-primary text-xs px-3 py-2.5 sm:py-1.5 rounded-lg">Entrada</router-link>
+            <router-link to="/registro" class="btn-craft-subtle text-xs px-3 py-2.5 sm:py-1.5 rounded-lg">Salida</router-link>
           </div>
         </div>
         <div v-if="datos.ocupacionPorTipo.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
