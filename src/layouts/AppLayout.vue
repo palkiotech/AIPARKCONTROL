@@ -214,8 +214,6 @@ import { useTemaStore } from '@/stores/tema'
 import { useConexionStore } from '@/stores/conexion'
 import { useAuthStore } from '@/stores/auth'
 import { cajaService } from '@/modules/caja/services/cajaService'
-import { ocupacionService } from '@/modules/ocupacion/services/ocupacionService'
-import { mensualidadesService } from '@/modules/mensualidades/services/mensualidadesService'
 import { ajustesService } from '@/modules/ajustes/services/ajustesService'
 import { dashboardService } from '@/modules/dashboard/services/dashboardService'
 import { sincronizarAhora, iniciarSincronizacionAutomatica, medirDesfaseHorario } from '@/offline/sync'
@@ -329,7 +327,8 @@ async function refrescarTurno(forzar = false) {
     turno.value = null
     return
   }
-  if (!forzar && Date.now() - ultimaConsultaTurno < 30000) return
+  // Realtime avisa cada cambio de turno; esto es solo un respaldo
+  if (!forzar && Date.now() - ultimaConsultaTurno < 10 * 60 * 1000) return
   ultimaConsultaTurno = Date.now()
   try {
     turno.value = await cajaService.obtenerTurnoActual(authStore.parqueaderoId)
@@ -341,14 +340,13 @@ async function refrescarTurno(forzar = false) {
 function precalentarDatos(pqId) {
   if (!pqId || authStore.isSuperadmin) return
   const opciones = { diasAviso: authStore.diasAviso, zonaHoraria: authStore.zonaHoraria, esAdmin: authStore.isAdmin }
-  // Precarga en segundo plano; también deja copia local para operar sin conexión
+  // Precarga en segundo plano; también deja copia local para operar sin conexión.
+  // El dashboard ya trae el patio y las mensualidades: no se piden aparte.
   Promise.allSettled([
     ajustesService.listarTiposVehiculo(pqId),
     ajustesService.listarMetodosPago(pqId),
     ajustesService.listarTarifas(pqId),
     ajustesService.listarPlanesMensuales(pqId),
-    ocupacionService.obtenerVehiculosDentro(pqId),
-    mensualidadesService.listarMensualidades(pqId, opciones),
     dashboardService.obtenerDatosDashboard(pqId, opciones)
   ])
 }
@@ -359,6 +357,7 @@ async function iniciar() {
   await medirDesfaseHorario()
   conexionStore.checkClockDrift()
   refrescarTurno(true)
+  escucharTurno()
   precalentarDatos(authStore.parqueaderoId)
   if (conexionStore.isOnline) sincronizarAhora(conexionStore).catch(() => {})
 }
@@ -372,12 +371,22 @@ watch(() => authStore.parqueaderoId, (nuevo) => {
   if (nuevo) iniciar()
 })
 
-watch(() => route.path, (nueva, anterior) => {
+watch(() => route.path, () => {
   menuMas.value = false
   menuUsuario.value = false
-  const tocaCaja = nueva.startsWith('/caja') || (anterior || '').startsWith('/caja')
-  refrescarTurno(tocaCaja)
+  refrescarTurno()
 })
+
+// El encabezado muestra el turno: se actualiza solo cuando Realtime avisa un cambio
+let cancelarTurno = null
+let temporizadorTurno = null
+function escucharTurno() {
+  if (cancelarTurno || !authStore.parqueaderoId) return
+  cancelarTurno = cajaService.suscribirCambios(authStore.parqueaderoId, () => {
+    clearTimeout(temporizadorTurno)
+    temporizadorTurno = setTimeout(() => refrescarTurno(true), 500)
+  })
+}
 
 // Sesión expirada o cerrada en otra pestaña: volver al login
 watch(() => authStore.isAuthenticated, (autenticado) => {
@@ -391,6 +400,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('online', alVolverLaRed)
+  clearTimeout(temporizadorTurno)
+  if (cancelarTurno) cancelarTurno()
 })
 
 async function ejecutarSincronizacion() {

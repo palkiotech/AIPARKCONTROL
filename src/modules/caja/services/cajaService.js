@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { escucharTablas } from '@/lib/realtime'
 import { guardarReferencia, leerReferencia } from '@/offline/referencia'
 import { registrarLimpieza, esErrorDeRed, estaEnLinea } from '@/lib/sesionCaches'
 
@@ -135,12 +136,8 @@ export const cajaService = {
     return data
   },
 
+  /** Cambios de turno (canal compartido entre el encabezado, Caja y el patio). */
   suscribirCambios(parqueaderoId, onCambio) {
-    if (!parqueaderoId) return () => {}
-    const canal = supabase
-      .channel(`caja-${parqueaderoId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'turnos_caja', filter: `parqueadero_id=eq.${parqueaderoId}` }, () => onCambio())
-      .subscribe()
-    return () => { supabase.removeChannel(canal) }
+    return escucharTablas(['turnos_caja'], parqueaderoId, onCambio)
   }
 }

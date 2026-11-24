@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { escucharTablas } from '@/lib/realtime'
 import { clasificarEstadoMensualidad } from '@/domain/estadoMensualidad'
 import { encolarOperacion } from '@/offline/cola'
 import { guardarReferencia, leerReferencia } from '@/offline/referencia'
@@ -180,13 +181,8 @@ export const mensualidadesService = {
     return { success: true, offline: true }
   },
 
+  /** Cambios de mensualidades y avisos (canal compartido entre Dashboard y Mensualidades). */
   suscribirCambios(parqueaderoId, onCambio) {
-    if (!parqueaderoId) return () => {}
-    const canal = supabase
-      .channel(`mensualidades-${parqueaderoId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'mensualidades', filter: `parqueadero_id=eq.${parqueaderoId}` }, () => onCambio())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'avisos_mensualidad', filter: `parqueadero_id=eq.${parqueaderoId}` }, () => onCambio())
-      .subscribe()
-    return () => { supabase.removeChannel(canal) }
+    return escucharTablas(['mensualidades', 'avisos_mensualidad'], parqueaderoId, onCambio)
   }
 }

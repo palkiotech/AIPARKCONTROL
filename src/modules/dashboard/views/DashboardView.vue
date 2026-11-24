@@ -343,7 +343,11 @@ async function cargar(forzar = false) {
       zonaHoraria: authStore.zonaHoraria,
       esAdmin: authStore.isAdmin
     })
-    if (consulta === consultaVigente) datos.value = resultado
+    if (consulta === consultaVigente) {
+      datos.value = resultado
+      ultimaCarga = Date.now()
+      pendiente = false
+    }
   } catch (e) {
     if (consulta === consultaVigente) error.value = mensajeDeError(e, 'No se pudo cargar el dashboard')
   } finally {
@@ -383,30 +387,76 @@ function irAPagar(m) {
   router.push({ path: '/mensualidades', query: { pagar: m.id } })
 }
 
-// Actualización: Realtime + cada 60 s mientras la vista está activa
+// Actualización:
+// - Entradas y salidas (Realtime): la ocupación se recalcula con la copia local,
+//   sin consultar; las cifras de ingresos del admin se refrescan como máximo cada 2 min.
+// - Mensualidades y avisos (Realtime): recarga completa (son cambios poco frecuentes).
+// - Respaldo: recarga completa cada 10 min mientras la vista está activa.
+const INTERVALO_REFRESCO = 10 * 60 * 1000
+const ESPERA_CIFRAS_ADMIN = 2 * 60 * 1000
 let cancelarMens = null
 let cancelarPatio = null
 let intervalo = null
 let debounce = null
+let temporizadorCifras = null
+let activa = false
+let pendiente = false
+let ultimaCarga = 0
 
 function programarRecarga() {
+  if (!activa) { pendiente = true; return }
   clearTimeout(debounce)
   debounce = setTimeout(() => cargar(true), 800)
+}
+
+async function alCambiarPatio(payload) {
+  if (payload?.reconectado || !activa) {
+    if (activa) programarRecarga()
+    else pendiente = true
+    return
+  }
+  if (!datos.value) return
+  const pq = authStore.parqueaderoId
+  const consulta = consultaVigente
+  const actualizado = await dashboardService.actualizarOcupacion(pq, datos.value)
+  if (consulta === consultaVigente) datos.value = actualizado
+  if (authStore.isAdmin && !temporizadorCifras) {
+    temporizadorCifras = setTimeout(async () => {
+      temporizadorCifras = null
+      if (!activa || !datos.value) return
+      const c = consultaVigente
+      try {
+        const conCifras = await dashboardService.actualizarCifrasAdmin(pq, authStore.zonaHoraria, datos.value)
+        if (c === consultaVigente) datos.value = conCifras
+      } catch (e) {
+        console.warn('No se pudieron actualizar las cifras del admin:', e)
+      }
+    }, ESPERA_CIFRAS_ADMIN)
+  }
 }
 
 function activar() {
   const pq = authStore.parqueaderoId
   if (!pq) return
+  activa = true
   if (!cancelarMens) cancelarMens = mensualidadesService.suscribirCambios(pq, programarRecarga)
-  if (!cancelarPatio) cancelarPatio = ocupacionService.suscribirCambios(pq, programarRecarga)
-  if (!intervalo) intervalo = setInterval(() => cargar(), 60000)
+  if (!cancelarPatio) cancelarPatio = ocupacionService.suscribirCambios(pq, alCambiarPatio)
+  if (!intervalo) intervalo = setInterval(() => cargar(), INTERVALO_REFRESCO)
 }
 
+// Las suscripciones siguen vivas con la vista oculta (son baratas y comparten
+// canal); solo marcan que hay cambios para recargar al volver.
 function desactivar() {
-  if (cancelarMens) { cancelarMens(); cancelarMens = null }
-  if (cancelarPatio) { cancelarPatio(); cancelarPatio = null }
+  activa = false
   if (intervalo) { clearInterval(intervalo); intervalo = null }
   clearTimeout(debounce)
+}
+
+function desmontar() {
+  desactivar()
+  clearTimeout(temporizadorCifras)
+  if (cancelarMens) { cancelarMens(); cancelarMens = null }
+  if (cancelarPatio) { cancelarPatio(); cancelarPatio = null }
 }
 
 // Con <keep-alive>, onActivated también se dispara justo después del primer montaje
@@ -420,9 +470,10 @@ onActivated(() => {
     primeraActivacion = false
     return
   }
-  cargar(true)
+  // Solo se consulta si hubo cambios mientras estaba oculta o los datos son viejos
+  if (pendiente || Date.now() - ultimaCarga > INTERVALO_REFRESCO) cargar(true)
   activar()
 })
 onDeactivated(desactivar)
-onBeforeUnmount(desactivar)
+onBeforeUnmount(desmontar)
 </script>

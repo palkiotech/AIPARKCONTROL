@@ -1,7 +1,7 @@
 import { ref, computed, onMounted, onUnmounted, onActivated, onDeactivated } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { ocupacionService } from '@/modules/ocupacion/services/ocupacionService'
-import { ajustesService } from '@/modules/ajustes/services/ajustesService'
+import { ajustesService, invalidarCacheCatalogos } from '@/modules/ajustes/services/ajustesService'
 import { cajaService } from '@/modules/caja/services/cajaService'
 import { mensajeDeError } from '@/lib/sesionCaches'
 import { calcularCobroConFranja, resolverTarifas } from '@/domain/cobro'
@@ -12,6 +12,9 @@ import { formatearFechaHora } from '@/utils/fecha'
  * vehículos dentro, turno, refresco periódico y Realtime. Cada vista tiene su
  * propia instancia; los servicios mantienen la caché común.
  */
+// Respaldo por si Realtime pierde eventos; lo normal es que llegue cada cambio al instante
+export const INTERVALO_REFRESCO = 10 * 60 * 1000
+
 export function usePatio() {
   const authStore = useAuthStore()
   const zona = computed(() => authStore.zonaHoraria)
@@ -112,11 +115,16 @@ export function usePatio() {
   }
 
   // ---------- Carga ----------
+  // Realtime mantiene el patio y el turno al día; la consulta completa solo se
+  // repite cada 10 min como respaldo, al reconectar o al volver a una vista
+  // que quedó con cambios pendientes.
   let cargaEnCurso = null
-  async function cargarDatos() {
+  let ultimaCargaCompleta = 0
+  async function cargarDatos({ catalogosFrescos = false } = {}) {
     const pqId = authStore.parqueaderoId
     if (!pqId) return
     if (cargaEnCurso) return cargaEnCurso
+    if (catalogosFrescos) invalidarCacheCatalogos(pqId)
     cargaEnCurso = (async () => {
       try {
         const [t, ta, m, dentro, tu] = await Promise.all([
@@ -132,6 +140,8 @@ export function usePatio() {
         vehiculosDentro.value = dentro
         turno.value = tu
         errorMensaje.value = ''
+        ultimaCargaCompleta = Date.now()
+        pendiente = false
       } catch (err) {
         errorMensaje.value = mensajeDeError(err, 'No se pudo cargar el patio')
       } finally {
@@ -159,17 +169,33 @@ export function usePatio() {
     vehiculosDentro.value = ocupacionService.obtenerVehiculosDentroCache() || vehiculosDentro.value
   }
 
-  let temporizadorRecarga = null
-  function recargarConRetardo() {
-    clearTimeout(temporizadorRecarga)
-    temporizadorRecarga = setTimeout(cargarDatos, 400)
+  // ---------- Realtime y refresco ----------
+  let activa = false
+  let pendiente = false
+  let temporizadorTurno = null
+
+  function alCambiarPatio(payload) {
+    if (payload.reconectado) {
+      // Pudo perder eventos mientras estuvo desconectado
+      if (activa) cargarDatos()
+      else pendiente = true
+      return
+    }
+    // El servicio ya aplicó el cambio a la caché: no se consulta el servidor
+    tomarPatioDeCache()
+  }
+
+  function alCambiarTurno() {
+    if (!activa) { pendiente = true; return }
+    clearTimeout(temporizadorTurno)
+    temporizadorTurno = setTimeout(refrescarTurno, 400)
   }
 
   let intervalo = null
   let intervaloReloj = null
   function iniciarRefresco() {
     detenerRefresco()
-    intervalo = setInterval(cargarDatos, 60000)
+    intervalo = setInterval(cargarDatos, INTERVALO_REFRESCO)
     intervaloReloj = setInterval(() => { ahora.value = Date.now() }, 30000)
   }
   function detenerRefresco() {
@@ -179,23 +205,31 @@ export function usePatio() {
     intervaloReloj = null
   }
 
-  let cancelarSuscripcion = null
+  const cancelaciones = []
   onMounted(() => {
+    activa = true
     cargarDatos()
     iniciarRefresco()
-    cancelarSuscripcion = ocupacionService.suscribirCambios(authStore.parqueaderoId, recargarConRetardo)
+    cancelaciones.push(ocupacionService.suscribirCambios(authStore.parqueaderoId, alCambiarPatio))
+    cancelaciones.push(cajaService.suscribirCambios(authStore.parqueaderoId, alCambiarTurno))
   })
-  // keep-alive: onActivated también corre tras el primer montaje; cargarDatos
-  // no duplica consultas porque reutiliza la que está en curso
+  // keep-alive: onActivated también corre tras el primer montaje
   onActivated(() => {
-    cargarDatos()
+    activa = true
+    tomarPatioDeCache()
+    ahora.value = Date.now()
+    if (pendiente || Date.now() - ultimaCargaCompleta > INTERVALO_REFRESCO) cargarDatos()
     iniciarRefresco()
   })
-  onDeactivated(detenerRefresco)
-  onUnmounted(() => {
+  onDeactivated(() => {
+    activa = false
     detenerRefresco()
-    clearTimeout(temporizadorRecarga)
-    if (cancelarSuscripcion) cancelarSuscripcion()
+  })
+  onUnmounted(() => {
+    activa = false
+    detenerRefresco()
+    clearTimeout(temporizadorTurno)
+    for (const cancelar of cancelaciones) cancelar()
   })
 
   return {

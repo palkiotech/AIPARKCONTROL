@@ -4,14 +4,15 @@ import { generarProximosPeriodos } from '@/domain/periodo'
 import { guardarReferencia, leerReferencia } from '@/offline/referencia'
 import { registrarLimpieza, esErrorDeRed, estaEnLinea } from '@/lib/sesionCaches'
 
-// Caché en memoria para catálogos maestros con TTL de 60 segundos.
+// Caché en memoria para catálogos maestros con TTL de 10 minutos (igual al
+// refresco del patio). Guardar en Ajustes la invalida en este equipo.
 // La copia durable (IndexedDB) permite cobrar sin conexión.
 const cacheCatalogo = {
   tipos: new Map(),
   metodos: new Map(),
   planes: new Map(),
   tarifas: new Map(),
-  ttl: 60000
+  ttl: 10 * 60 * 1000
 }
 
 function getCache(map, key) {

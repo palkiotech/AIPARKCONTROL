@@ -858,13 +858,27 @@ async function guardarAviso() {
 }
 
 // --- Ciclo de vida: Realtime + recarga al volver a la vista ---
+// La suscripción sigue viva con la vista oculta (comparte canal con el
+// Dashboard) y solo marca cambios pendientes; al volver se recarga si hubo
+// cambios o si los datos tienen más de 10 min.
+const INTERVALO_REFRESCO = 10 * 60 * 1000
 let cancelarSuscripcion = null
 let debounce = null
+let activa = false
+let pendiente = false
+let ultimaCarga = 0
+
+function recargar() {
+  ultimaCarga = Date.now()
+  pendiente = false
+  cargar()
+}
 function suscribir() {
   if (cancelarSuscripcion || !authStore.parqueaderoId) return
   cancelarSuscripcion = mensualidadesService.suscribirCambios(authStore.parqueaderoId, () => {
+    if (!activa) { pendiente = true; return }
     clearTimeout(debounce)
-    debounce = setTimeout(cargar, 800)
+    debounce = setTimeout(recargar, 800)
   })
 }
 function desuscribir() {
@@ -874,18 +888,23 @@ function desuscribir() {
 
 let primeraActivacion = true
 onMounted(() => {
-  cargar()
+  activa = true
+  recargar()
   suscribir()
 })
 onActivated(() => {
+  activa = true
   if (primeraActivacion) {
     primeraActivacion = false
     return
   }
-  cargar()
+  if (pendiente || Date.now() - ultimaCarga > INTERVALO_REFRESCO) recargar()
   suscribir()
 })
-onDeactivated(desuscribir)
+onDeactivated(() => {
+  activa = false
+  clearTimeout(debounce)
+})
 onBeforeUnmount(desuscribir)
 </script>
 

@@ -214,6 +214,17 @@ check('recibir turno registra diferencia de recepción', rec.diferencia_recepcio
 await como(AD, () => q(`select public.cerrar_turno_sin_relevo($1, 19000, 'cierre noche')`, [rec.nuevo_turno_id]))
 check('cerrar sin relevo deja sin turno activo', (await q(`select count(*)::int n from public.turnos_caja where parqueadero_id=$1 and estado<>'cerrado'`, [pqA]))[0].n === 0)
 
+console.log('\n== Limpieza automática (keep_alive)')
+await q(`insert into public.operaciones_sync(id, parqueadero_id, tipo, payload, creada_en_dispositivo_at, procesada_at, resultado) values
+  ('44444444-4444-4444-8444-444444444441', $1, 'entrada', '{}', now() - interval '100 days', now() - interval '100 days', 'ok'),
+  ('44444444-4444-4444-8444-444444444442', $1, 'entrada', '{}', now() - interval '100 days', now() - interval '100 days', 'conflicto'),
+  ('44444444-4444-4444-8444-444444444443', $1, 'entrada', '{}', now() - interval '10 days', now() - interval '10 days', 'ok')`, [pqA])
+await db.exec(`set role anon`)
+await q(`select public.keep_alive()`)
+await db.exec(`reset role`)
+const quedan = (await q(`select id from public.operaciones_sync where id::text like '44444444-%' order by id`)).map(r => r.id.slice(-1))
+check('keep_alive borra solo operaciones ok de más de 90 días', JSON.stringify(quedan) === '["2","3"]', JSON.stringify(quedan))
+
 console.log('\n== Permisos de tabla (GRANT)')
 const leeTodas = await como(AD, async () => {
   for (const t of ['parqueaderos', 'profiles', 'tipos_vehiculo', 'tarifas', 'planes_mensuales', 'metodos_pago', 'vehiculos', 'clientes', 'turnos_caja', 'movimientos_caja', 'registros', 'mensualidades', 'pagos_mensualidad', 'avisos_mensualidad', 'operaciones_sync', 'comprobantes']) {

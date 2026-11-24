@@ -263,7 +263,7 @@ const conexionStore = useConexionStore()
 const {
   authStore, vehiculosDentro, cargando, errorMensaje,
   pesos, formatearHora, formatearDuracion, minutosTranscurridos, nombreTipo, clasePlaca,
-  tiposActivos, tarifasGeneralesDe, resumenOcupacion, estimaciones, textoEstimado, cargarDatos, quitarDelPatio
+  tiposActivos, tarifasGeneralesDe, resumenOcupacion, estimaciones, textoEstimado, quitarDelPatio
 } = usePatio()
 
 const mensajeExito = ref('')
@@ -320,7 +320,6 @@ async function confirmarAnular() {
     quitarDelPatio(anular.registro.id)
     anular.abierto = false
     avisar(`Registro ${anular.registro.placa} anulado`)
-    cargarDatos()
   } catch (err) {
     anular.error = mensajeDeError(err, 'No se pudo anular el registro')
   } finally {

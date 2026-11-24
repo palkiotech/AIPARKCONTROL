@@ -8,6 +8,24 @@ import { hoyEnZona, sumarDias, rangoDiaUtc, fechaEnZona, partesEnZona } from '@/
 let cacheDashboard = null
 registrarLimpieza(() => { cacheDashboard = null })
 
+// El patio lo mantiene al día Realtime; solo se vuelve a pedir si la copia es vieja
+const EDAD_MAXIMA_PATIO = 10 * 60 * 1000
+
+// Ocupación por tipo (la capacidad informa, no bloquea)
+function calcularOcupacionPorTipo(tipos, dentro) {
+  return tipos.filter(t => t.activo !== false).map(t => {
+    const delTipo = dentro.filter(v => v.tipo_vehiculo_id === t.id)
+    return {
+      id: t.id,
+      nombre: t.nombre,
+      capacidad: t.capacidad,
+      ocupados: delTipo.length,
+      mensualesDentro: delTipo.filter(v => v.es_mensual).length,
+      sobrecupo: delTipo.length > t.capacidad
+    }
+  })
+}
+
 /**
  * Dashboard (HU-23): semáforo, clientes para avisar, ocupación por tipo y,
  * solo para el admin, ingresos del día y gráficas.
@@ -20,7 +38,7 @@ export const dashboardService = {
   async obtenerDatosDashboard(parqueaderoId, { diasAviso = 5, zonaHoraria = 'America/Bogota', esAdmin = false } = {}) {
     const [mensualidades, dentro, tipos] = await Promise.all([
       mensualidadesService.listarMensualidades(parqueaderoId, { diasAviso, zonaHoraria }),
-      ocupacionService.obtenerVehiculosDentro(parqueaderoId),
+      ocupacionService.obtenerVehiculosDentro(parqueaderoId, { edadMaxima: EDAD_MAXIMA_PATIO }),
       ajustesService.listarTiposVehiculo(parqueaderoId).catch(() => [])
     ])
 
@@ -43,18 +61,8 @@ export const dashboardService = {
     const clientesAvisar = [...semaforo.rojo.mensualidades, ...semaforo.amarillo.mensualidades]
       .sort((a, b) => a.fecha_fin.localeCompare(b.fecha_fin))
 
-    // 3. Ocupación por tipo (la capacidad informa, no bloquea)
-    const ocupacionPorTipo = tipos.filter(t => t.activo !== false).map(t => {
-      const delTipo = dentro.filter(v => v.tipo_vehiculo_id === t.id)
-      return {
-        id: t.id,
-        nombre: t.nombre,
-        capacidad: t.capacidad,
-        ocupados: delTipo.length,
-        mensualesDentro: delTipo.filter(v => v.es_mensual).length,
-        sobrecupo: delTipo.length > t.capacidad
-      }
-    })
+    // 3. Ocupación por tipo
+    const ocupacionPorTipo = calcularOcupacionPorTipo(tipos, dentro)
 
     // 4. Total por cobrar en los próximos 7 días: lo pendiente (vencidas) más lo
     //    que vence desde hoy hasta hoy + 7
@@ -81,6 +89,26 @@ export const dashboardService = {
 
     cacheDashboard = resultado
     return resultado
+  },
+
+  /**
+   * Recalcula solo la ocupación con la copia local del patio (sin consultar el
+   * servidor). Se usa con cada entrada o salida que llega por Realtime.
+   */
+  async actualizarOcupacion(parqueaderoId, datos) {
+    if (!datos) return datos
+    const dentro = ocupacionService.obtenerVehiculosDentroCache() || []
+    const tipos = await ajustesService.listarTiposVehiculo(parqueaderoId).catch(() => [])
+    cacheDashboard = { ...datos, ocupacionCount: dentro.length, ocupacionPorTipo: calcularOcupacionPorTipo(tipos, dentro) }
+    return cacheDashboard
+  },
+
+  /** Vuelve a pedir solo las cifras del admin (ingresos y entradas por hora). */
+  async actualizarCifrasAdmin(parqueaderoId, zonaHoraria, datos) {
+    if (!datos || !estaEnLinea()) return datos
+    const admin = await this.obtenerCifrasAdmin(parqueaderoId, zonaHoraria)
+    cacheDashboard = { ...datos, admin }
+    return cacheDashboard
   },
 
   /**

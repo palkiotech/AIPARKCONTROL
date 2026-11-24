@@ -441,7 +441,7 @@ const {
   authStore, zona, tarifas, vehiculosDentro, turno, cargando, errorMensaje,
   pesos, formatearHora, formatearDuracion, minutosTranscurridos, nombreTipo, clasePlaca, nombreModalidad,
   tiposActivos, tiposConTarifa, metodosActivos, turnoAbierto, tarifasGeneralesDe, ocupadosTipo,
-  textoEstimado, cargarDatos, refrescarTurno, quitarDelPatio, tomarPatioDeCache
+  textoEstimado, cargarDatos, quitarDelPatio, tomarPatioDeCache
 } = usePatio()
 
 const modoTicket = computed(() => authStore.parqueadero?.modo_ticket || 'qr')
@@ -497,8 +497,7 @@ watch([tiposConTarifa, tarifas], () => {
 
 async function confirmarEntrada(forzar) {
   entrada.error = ''
-  // El turno pudo cerrarse en otro dispositivo: confirmar antes de registrar
-  await refrescarTurno()
+  // Realtime mantiene el turno al día; el servidor lo vuelve a validar igual
   if (!turnoAbierto.value) {
     entrada.error = 'No hay un turno de caja abierto. Inicia el turno en Caja para registrar placas.'
     return
@@ -548,13 +547,13 @@ async function confirmarEntrada(forzar) {
       sobrecupo: !!res.sobrecupo,
       offline: !!res.offline
     })
-    if (res.offline) tomarPatioDeCache()
-    else cargarDatos()
+    // El servicio ya la agregó a la caché del patio: no hace falta consultar
+    tomarPatioDeCache()
   } catch (err) {
     entrada.avisoCapacidad = false
     entrada.error = mensajeDeError(err, 'No se pudo registrar la entrada')
-    // El servidor pudo rechazarla por turno o tarifas: actualizar el estado
-    cargarDatos()
+    // El servidor pudo rechazarla por turno o tarifas cambiadas en otro equipo
+    cargarDatos({ catalogosFrescos: true })
   } finally {
     entrada.guardando = false
   }
@@ -741,8 +740,6 @@ async function abrirCobro(v) {
     pagaCon: null,
     metodoPagoId: metodosActivos.value[0]?.id || null
   })
-  // Asegurar estado de caja actualizado antes de cobrar
-  refrescarTurno()
   await cotizar()
 }
 
@@ -809,7 +806,6 @@ async function confirmarSalida() {
     cobro.abierto = false
     salida.placa = ''
     quitarDelPatio(registro.id)
-    if (!res.offline) cargarDatos()
   } catch (err) {
     cobro.error = mensajeDeError(err, 'No se pudo registrar la salida')
   } finally {

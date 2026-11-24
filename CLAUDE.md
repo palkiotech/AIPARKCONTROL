@@ -66,7 +66,14 @@ Node 22. There is no linter. `.env` needs `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 ### UI patterns
 - Routed views live inside `<keep-alive>`: refresh in `onActivated`, not only `onMounted`.
-- Realtime: services expose `suscribirCambios(pqId, cb)`; views subscribe on mount and unsubscribe on unmount.
+- Realtime: services expose `suscribirCambios(pqId, cb)` built on `escucharTablas` (`src/lib/realtime.js`). It keeps one shared channel per table set and parqueadero, with a unique name.
+  - Never call `supabase.channel()` directly. A repeated name returns the existing channel, so later bindings never fire and the first unsubscribe cuts everyone.
+  - Callbacks get the `postgres_changes` payload, or `{ reconectado: true }` after a reconnect (events may have been missed, so reload).
+- Supabase Free budget: Realtime is the live source; full reloads are a fallback.
+  - Polling and the catalog cache TTL are 10 min.
+  - The patio cache is updated from the Realtime payload (`ocupacionService.aplicarCambio`), not refetched.
+  - Hidden keep-alive views only mark changes as pending and reload in `onActivated` if pending or older than 10 min.
+  - Do not add reloads after an own mutation when Realtime or the service already updates the cache.
 - Design tokens are CSS variables in `src/assets/main.css` (`:root` and `.dark`), mapped in `tailwind.config.js`. Never use raw Tailwind palette colors (`emerald-500`…) in views; use tokens (`text-success`, `bg-primary/10`…).
 - Use the component classes from `main.css` instead of restyling inline:
   - Layout: `titulo-pagina`, `subtitulo-pagina`, `titulo-seccion`, `rotulo`.

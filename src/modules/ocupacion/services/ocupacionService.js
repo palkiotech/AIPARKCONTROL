@@ -5,12 +5,22 @@ import { encolarOperacion } from '@/offline/cola'
 import { guardarReferencia, leerReferencia } from '@/offline/referencia'
 import { registrarLimpieza, esErrorDeRed, estaEnLinea } from '@/lib/sesionCaches'
 import { calcularCobroConFranja, resolverTarifas } from '@/domain/cobro'
+import { escucharTablas } from '@/lib/realtime'
 
-// Caché en memoria para pintar al instante (SWR); la copia durable está en IndexedDB
+// Caché en memoria para pintar al instante (SWR); la copia durable está en IndexedDB.
+// Realtime la mantiene al día aplicando cada cambio, sin volver a pedir la lista.
 let cacheVehiculos = null
-registrarLimpieza(() => { cacheVehiculos = null })
+let ultimaCarga = 0
+registrarLimpieza(() => { cacheVehiculos = null; ultimaCarga = 0 })
 
-const SELECT_REGISTRO = '*, tipos_vehiculo(nombre, icono), tarifas(id, nombre, valor, modalidad, minutos_gracia, minutos_fraccion, tope_por_24h, franja_inicio, franja_fin)'
+// Solo las columnas que usa el patio: el tipo y la tarifa salen de los catálogos
+// (≈ 4 veces menos datos por fila que '*' con tablas anidadas)
+const COLUMNAS_PATIO = ['id', 'placa', 'tipo_vehiculo_id', 'tarifa_id', 'vehiculo_id', 'entrada_at', 'es_mensual', 'estado']
+const SELECT_REGISTRO = COLUMNAS_PATIO.join(', ')
+
+function aFilaPatio(fila) {
+  return Object.fromEntries(COLUMNAS_PATIO.map(c => [c, fila[c] ?? null]))
+}
 
 async function persistirPatio(parqueaderoId) {
   if (cacheVehiculos) await guardarReferencia(parqueaderoId, 'vehiculos_dentro', cacheVehiculos)
@@ -40,6 +50,19 @@ export const ocupacionService = {
           p_hora_dispositivo: null
         })
         if (error) throw error
+        // Reflejarla ya en el patio; el evento Realtime la reemplaza con la fila real
+        this.aplicarCambio(parqueaderoId, {
+          eventType: 'INSERT',
+          new: {
+            id: data.registro_id,
+            placa: data.placa,
+            tipo_vehiculo_id: tipoVehiculoId,
+            tarifa_id: data.tarifa_id ?? tarifaId,
+            entrada_at: data.entrada_at,
+            es_mensual: !!data.es_mensual,
+            estado: 'abierto'
+          }
+        })
         return { ...data, offline: false }
       } catch (err) {
         if (!esErrorDeRed(err)) throw err
@@ -78,8 +101,10 @@ export const ocupacionService = {
   /**
    * Vehículos dentro (HU-12). Sin conexión devuelve la copia local (IndexedDB).
    */
-  async obtenerVehiculosDentro(parqueaderoId) {
+  async obtenerVehiculosDentro(parqueaderoId, { edadMaxima = 0 } = {}) {
     if (!parqueaderoId) return []
+    // Con Realtime activo la caché ya está al día: no hace falta volver a pedirla
+    if (edadMaxima > 0 && cacheVehiculos && Date.now() - ultimaCarga < edadMaxima) return cacheVehiculos
 
     if (estaEnLinea()) {
       try {
@@ -94,6 +119,7 @@ export const ocupacionService = {
         // Conservar las entradas offline que aún no se han sincronizado
         const pendientes = (cacheVehiculos || []).filter(v => v.pendiente_sync && !data.some(d => d.id === v.id))
         cacheVehiculos = [...pendientes, ...(data || [])]
+        ultimaCarga = Date.now()
         await persistirPatio(parqueaderoId)
         return cacheVehiculos
       } catch (err) {
@@ -230,15 +256,30 @@ export const ocupacionService = {
   },
 
   /**
-   * Suscripción Realtime a cambios del patio (entradas/salidas en otros dispositivos).
-   * Devuelve una función para cancelar la suscripción.
+   * Aplica a la caché un cambio de Realtime de la tabla registros. Es idempotente:
+   * aplicar el mismo evento varias veces deja el mismo resultado.
+   */
+  aplicarCambio(parqueaderoId, payload) {
+    if (!cacheVehiculos || !payload) return
+    const nuevo = payload.new && Object.keys(payload.new).length ? payload.new : null
+    const id = nuevo?.id || payload.old?.id
+    if (!id) return
+    let lista = cacheVehiculos.filter(v => v.id !== id)
+    if (payload.eventType !== 'DELETE' && nuevo?.estado === 'abierto') {
+      lista = [aFilaPatio(nuevo), ...lista].sort((a, b) => new Date(b.entrada_at) - new Date(a.entrada_at))
+    }
+    cacheVehiculos = lista
+    persistirPatio(parqueaderoId)
+  },
+
+  /**
+   * Suscripción Realtime al patio (canal compartido). onCambio recibe el payload
+   * ya aplicado a la caché, o { reconectado: true } si pudo perder eventos.
    */
   suscribirCambios(parqueaderoId, onCambio) {
-    if (!parqueaderoId) return () => {}
-    const canal = supabase
-      .channel(`patio-${parqueaderoId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'registros', filter: `parqueadero_id=eq.${parqueaderoId}` }, () => onCambio())
-      .subscribe()
-    return () => { supabase.removeChannel(canal) }
+    return escucharTablas(['registros'], parqueaderoId, (payload) => {
+      if (!payload.reconectado) this.aplicarCambio(parqueaderoId, payload)
+      onCambio(payload)
+    })
   }
 }
