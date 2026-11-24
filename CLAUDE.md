@@ -40,6 +40,7 @@ Node 22. There is no linter. `.env` needs `VITE_SUPABASE_URL` and `VITE_SUPABASE
   - `vehiculos` and `clientes` allow updates.
 - `profiles` cannot be edited by users directly. Role and active-status changes go through `actualizar_usuario`; new profiles are created by the Edge Function `supabase/functions/invitar-usuario` with the service role.
 - The superadmin sees `parqueaderos` and `profiles` only, not business data (HU-05).
+- New Supabase projects do not grant table privileges by default. Every new table needs explicit `GRANT`s in its migration (see `20261123000000_permisos_tablas.sql`): `select` to `authenticated`, writes only where a policy allows them, nothing to `anon`, all to `service_role`. `test:db` does not add global grants, so a missing one fails there.
 - Schema changes go in a **new** migration file; never edit applied ones. `supabase/full_schema.sql` is just all migrations concatenated in order. Regenerate it after adding one: `for f in supabase/migrations/*.sql; do cat "$f"; echo; done > supabase/full_schema.sql`.
 
 ### Charging (decision #4: the server decides)

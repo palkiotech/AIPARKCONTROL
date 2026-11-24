@@ -36,7 +36,8 @@ for (const f of fs.readdirSync(dir).sort()) {
     process.exit(1)
   }
 }
-await db.exec(`grant select, insert, update, delete on all tables in schema public to authenticated, service_role;`)
+// Sin GRANT globales: los permisos de tabla vienen de las migraciones, como en
+// un proyecto nuevo de Supabase (que ya no los da por defecto).
 
 // El seed debe cargar sin errores sobre el esquema actual
 try {
@@ -124,7 +125,6 @@ const efectivoA = (await q(`select id from public.metodos_pago where parqueadero
 console.log('\n== Patio y caja')
 await esperaError('salida sin turno con valor > 0 falla', () => como(OP, async () => {
   const e = (await q(`select public.registrar_entrada(null,'abc-123',$1) r`, [tiposA[0]]))[0].r
-  await q(`update public.registros set entrada_at = now() - interval '70 minutes' where id=$1`, [e.registro_id])
   await db.exec('reset role')
   await q(`update public.registros set entrada_at = now() - interval '70 minutes' where id=$1`, [e.registro_id])
   await db.exec(`set role authenticated`)
@@ -210,6 +210,24 @@ const rec = await como(AD, async () => (await q(`select public.recibir_turno($1,
 check('recibir turno registra diferencia de recepción', rec.diferencia_recepcion === -1000, JSON.stringify(rec))
 await como(AD, () => q(`select public.cerrar_turno_sin_relevo($1, 19000, 'cierre noche')`, [rec.nuevo_turno_id]))
 check('cerrar sin relevo deja sin turno activo', (await q(`select count(*)::int n from public.turnos_caja where parqueadero_id=$1 and estado<>'cerrado'`, [pqA]))[0].n === 0)
+
+console.log('\n== Permisos de tabla (GRANT)')
+const leeTodas = await como(AD, async () => {
+  for (const t of ['parqueaderos', 'profiles', 'tipos_vehiculo', 'tarifas', 'planes_mensuales', 'metodos_pago', 'vehiculos', 'clientes', 'turnos_caja', 'movimientos_caja', 'registros', 'mensualidades', 'pagos_mensualidad', 'avisos_mensualidad', 'operaciones_sync', 'comprobantes']) {
+    try { await q(`select 1 from public.${t} limit 1`) } catch (e) { return `${t}: ${e.message}` }
+  }
+  return 'ok'
+})
+check('authenticated puede leer todas las tablas de la app', leeTodas === 'ok', leeTodas)
+await esperaError('authenticated no puede insertar en registros', () => como(AD, () => q(`insert into public.registros(parqueadero_id) values ($1)`, [pqA])), 'permission denied')
+await esperaError('authenticated no puede borrar tarifas', () => como(AD, () => q(`delete from public.tarifas`)), 'permission denied')
+const editaCatalogo = await como(AD, async () => { try { await q(`update public.metodos_pago set orden = orden where parqueadero_id = $1`, [pqA]); return true } catch (e) { return e.message } })
+check('admin puede editar su catálogo', editaCatalogo === true, String(editaCatalogo))
+await db.exec(`set role anon`)
+let anonLee = false
+try { await q(`select 1 from public.registros limit 1`); anonLee = true } catch {}
+await db.exec(`reset role`)
+check('anon no puede leer tablas', !anonLee)
 
 console.log(fallas.length ? `\n${fallas.length} FALLAS` : '\nTODO OK')
 process.exit(fallas.length ? 1 : 0)
