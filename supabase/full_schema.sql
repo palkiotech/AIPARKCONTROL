@@ -4096,3 +4096,11 @@ set tarifa_snapshot = public.compactar_snapshot_tarifa(tarifa_snapshot)
 where tarifa_snapshot is not null
   and tarifa_snapshot is distinct from public.compactar_snapshot_tarifa(tarifa_snapshot);
 
+-- Modo de ticket 'impresora': ticket en hoja carta o A4 para impresoras normales
+-- (láser o tinta) conectadas por WiFi, Bluetooth o USB. Se imprime con el
+-- diálogo de impresión del sistema (src/lib/ticketImpresion.js).
+
+alter table public.parqueaderos drop constraint if exists parqueaderos_modo_ticket_check;
+alter table public.parqueaderos add constraint parqueaderos_modo_ticket_check
+  check (modo_ticket in ('termica', 'qr', 'ninguno', 'impresora'));
+

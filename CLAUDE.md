@@ -83,6 +83,10 @@ Node 22. There is no linter. `.env` needs `VITE_SUPABASE_URL` and `VITE_SUPABASE
   - Modals: `modal-fondo`, `modal-panel`, `modal-encabezado`.
   - Feedback and data: `alerta-exito|error|aviso|info`, `tabla`, `vacio`, `spinner`.
   - Surfaces: `card-craft`, `plate-colombia`.
+- Entry tickets print through `src/lib/ticketImpresion.js`, used by `RegistroView` and the test print in Ajustes.
+  - Formats: `termica` (58/80 mm roll) and `hoja` (`modo_ticket = 'impresora'`: letter/A4 with a dashed cut line).
+  - Printing goes through the OS print dialog (AirPrint, Mopria, Windows), which reaches WiFi, Bluetooth and USB printers. Don't add printer-specific code.
+  - The QR holds the `registros.id` that `RegistroView` scans to charge.
 - Font is Inter (bundled, works offline). Smallest text size is `text-2xs` (11 px). No emojis in the UI: vehicle icons come from `src/components/IconoVehiculo.vue`.
 
 ### Hosting

@@ -232,25 +232,29 @@
           <button @click="compartirQR" class="w-full btn-craft-subtle text-sm px-3 py-2.5 rounded-lg">Compartir / descargar QR</button>
         </template>
 
-        <div v-if="modoTicket === 'termica'" class="flex flex-col sm:flex-row gap-2">
-          <button @click="imprimirTicket" class="flex-1 btn-craft-primary text-sm px-3 py-2.5 rounded-lg">Imprimir ticket</button>
-          <button v-if="!ticket.mostrarQR" @click="ticket.mostrarQR = true" class="flex-1 btn-craft-subtle text-sm px-3 py-2.5 rounded-lg">Mostrar QR</button>
-        </div>
+        <!-- Imprimir solo si el parqueadero configuró una impresora (Ajustes → Ticket).
+             El navegador no puede saber si la impresora está conectada: se pregunta al operario. -->
+        <template v-if="modoImprime">
+          <div v-if="ticket.preguntarImpresion" class="alerta-aviso flex-col text-left">
+            <p class="font-semibold">¿Salió el ticket impreso?</p>
+            <div class="flex flex-col-reverse sm:flex-row gap-2 w-full">
+              <button type="button" @click="noSeImprimio" class="flex-1 btn-craft-subtle text-sm px-3 py-2.5 sm:py-2 rounded-lg">No, mostrar QR</button>
+              <button type="button" @click="ticket.preguntarImpresion = false" class="flex-1 btn-craft-primary text-sm px-3 py-2.5 sm:py-2 rounded-lg">Sí, salió bien</button>
+            </div>
+          </div>
+          <p v-if="ticket.fallaImpresion" class="alerta-error text-left" role="alert">
+            Revisa que la impresora esté encendida, con papel y agregada en este equipo (WiFi o Bluetooth). Mientras tanto el cliente puede tomarle foto al QR.
+          </p>
+          <div v-if="!ticket.preguntarImpresion" class="flex flex-col sm:flex-row gap-2">
+            <button @click="imprimirTicketActual" class="flex-1 btn-craft-primary text-sm px-3 py-2.5 rounded-lg">{{ ticket.impreso ? 'Reimprimir ticket' : 'Imprimir ticket' }}</button>
+            <button v-if="!ticket.mostrarQR" @click="ticket.mostrarQR = true" class="flex-1 btn-craft-subtle text-sm px-3 py-2.5 rounded-lg">Mostrar QR</button>
+          </div>
+        </template>
+        <p v-else-if="authStore.isAdmin" class="text-xs text-text-muted">
+          ¿Tiene impresora? Actívela en <router-link :to="{ name: 'ajustes' }" class="text-primary font-medium" @click="cerrarTicket">Ajustes → Ticket</router-link> para imprimir los tickets.
+        </p>
         <button @click="cerrarTicket" class="w-full btn-craft-success text-sm px-4 py-2.5 rounded-lg">Listo</button>
       </div>
-    </div>
-
-    <!-- Ticket térmico imprimible (oculto en pantalla) -->
-    <div v-if="ticket.datos" id="pc-ticket-termico" class="pc-ticket-termico" :style="{ width: (anchoTicket - 4) + 'mm' }">
-      <p class="pc-t-centro pc-t-negrita">{{ authStore.parqueadero?.nombre }}</p>
-      <p v-if="authStore.parqueadero?.nit" class="pc-t-centro">NIT {{ authStore.parqueadero.nit }}</p>
-      <p class="pc-t-centro">--------------------------------</p>
-      <p class="pc-t-centro pc-t-placa">{{ ticket.datos.placa }}</p>
-      <p>Tipo: {{ ticket.datos.tipoNombre }}</p>
-      <p>Entrada: {{ formatearFechaHora(ticket.datos.entrada_at, zona, { year: 'numeric' }) }}</p>
-      <p v-if="ticket.datos.tarifaNombre">Tarifa: {{ ticket.datos.tarifaNombre }}</p>
-      <img v-if="ticket.qr" :src="ticket.qr" alt="" class="pc-t-qr" />
-      <p v-if="authStore.parqueadero?.texto_pie_comprobante" class="pc-t-centro pc-t-pie">{{ authStore.parqueadero.texto_pie_comprobante }}</p>
     </div>
 
     <!-- MODAL ESCÁNER QR -->
@@ -432,6 +436,7 @@ import { mensajeDeError } from '@/lib/sesionCaches'
 import { normalizarPlaca, esPlacaValida } from '@/utils/placa'
 import { formatearFechaHora, formatearFechaCorta } from '@/utils/fecha'
 import { usePatio } from '@/modules/ocupacion/composables/usePatio'
+import { imprimirTicket, textoTarifa, referenciaTicket } from '@/lib/ticketImpresion'
 import IconoVehiculo from '@/components/IconoVehiculo.vue'
 
 const route = useRoute()
@@ -446,6 +451,8 @@ const {
 
 const modoTicket = computed(() => authStore.parqueadero?.modo_ticket || 'qr')
 const anchoTicket = computed(() => (authStore.parqueadero?.ancho_ticket_mm === 58 ? 58 : 80))
+// 'termica' (rollo) e 'impresora' (hoja en láser o tinta, por WiFi, Bluetooth o cable) imprimen el ticket
+const modoImprime = computed(() => modoTicket.value === 'termica' || modoTicket.value === 'impresora')
 const billetes = [10000, 20000, 50000, 100000]
 
 const mensajeExito = ref('')
@@ -541,7 +548,7 @@ async function confirmarEntrada(forzar) {
       placa: res.placa,
       tipoNombre: tipo?.nombre || '',
       entrada_at: res.entrada_at,
-      tarifaNombre: tarifa?.nombre || '',
+      tarifaTexto: textoTarifa(tarifa),
       es_mensual: !!res.es_mensual,
       mensualidad: res.mensualidad || null,
       sobrecupo: !!res.sobrecupo,
@@ -560,13 +567,17 @@ async function confirmarEntrada(forzar) {
 }
 
 // ---------- Ticket (HU-27) ----------
-const ticket = reactive({ abierto: false, datos: null, qr: '', mostrarQR: false })
+const ticket = reactive({ abierto: false, datos: null, qr: '', mostrarQR: false, impreso: false, preguntarImpresion: false, fallaImpresion: false })
 
 async function mostrarTicket(datos) {
   ticket.datos = datos
   ticket.qr = ''
+  ticket.impreso = false
+  ticket.preguntarImpresion = false
+  ticket.fallaImpresion = false
   ticket.mostrarQR = modoTicket.value === 'qr'
-  if (modoTicket.value !== 'ninguno' && datos.registro_id) {
+  // El QR se genera siempre: el botón Imprimir está disponible en cualquier modo
+  if (datos.registro_id) {
     try {
       ticket.qr = await QRCode.toDataURL(String(datos.registro_id), { width: 320, margin: 1 })
     } catch (e) {
@@ -586,33 +597,38 @@ async function mostrarTicket(datos) {
   }
 
   ticket.abierto = true
-  if (modoTicket.value === 'termica') {
+  if (modoImprime.value) {
     await nextTick()
-    imprimirTicket()
+    imprimirTicketActual()
   }
 }
 
-function imprimirTicket() {
+async function imprimirTicketActual() {
+  const d = ticket.datos
+  if (!d) return
   try {
-    let estilo = document.getElementById('pc-ticket-page')
-    if (!estilo) {
-      estilo = document.createElement('style')
-      estilo.id = 'pc-ticket-page'
-      document.head.appendChild(estilo)
-    }
-    estilo.textContent = `@media print { @page { size: ${anchoTicket.value}mm auto; margin: 0; } }`
-    document.body.classList.add('pc-imprimiendo-ticket')
-    const limpiar = () => {
-      document.body.classList.remove('pc-imprimiendo-ticket')
-      window.removeEventListener('afterprint', limpiar)
-    }
-    window.addEventListener('afterprint', limpiar)
-    window.print()
-    setTimeout(limpiar, 1500)
+    await imprimirTicket({
+      parqueadero: authStore.parqueadero || {},
+      placa: d.placa,
+      tipoNombre: d.tipoNombre,
+      entradaTexto: formatearFechaHora(d.entrada_at, zona.value, { year: 'numeric' }),
+      tarifaTexto: d.tarifaTexto,
+      referencia: referenciaTicket(d.registro_id),
+      qr: ticket.qr
+    }, { formato: modoTicket.value === 'termica' ? 'termica' : 'hoja', ancho: anchoTicket.value })
+    ticket.impreso = true
+    // Al volver del diálogo de impresión, el operario confirma si salió
+    ticket.preguntarImpresion = true
   } catch (e) {
-    // Si la impresión falla, se muestra el QR en pantalla
-    ticket.mostrarQR = true
+    noSeImprimio()
   }
+}
+
+// Sin ticket impreso, el cliente sale con el QR en pantalla (foto o compartir)
+function noSeImprimio() {
+  ticket.preguntarImpresion = false
+  ticket.fallaImpresion = true
+  ticket.mostrarQR = true
 }
 
 async function compartirQR() {
@@ -890,55 +906,3 @@ watch(cargando, (c) => { if (!c && !cobro.abierto) enfocarEntrada() })
 onDeactivated(cerrarEscaner)
 onUnmounted(cerrarEscaner)
 </script>
-
-<style>
-/* Ticket térmico (HU-27): oculto en pantalla, visible solo al imprimir el ticket */
-.pc-ticket-termico {
-  display: none;
-}
-
-@media print {
-  body.pc-imprimiendo-ticket * {
-    visibility: hidden !important;
-  }
-  body.pc-imprimiendo-ticket .pc-ticket-termico,
-  body.pc-imprimiendo-ticket .pc-ticket-termico * {
-    visibility: visible !important;
-  }
-  body.pc-imprimiendo-ticket .pc-ticket-termico {
-    display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    padding: 2mm;
-    font-family: 'Courier New', monospace;
-    font-size: 10pt;
-    line-height: 1.25;
-    color: #000;
-    background: #fff;
-  }
-  .pc-ticket-termico p {
-    margin: 0 0 1mm 0;
-    word-break: break-word;
-  }
-  .pc-t-centro {
-    text-align: center;
-  }
-  .pc-t-negrita {
-    font-weight: bold;
-  }
-  .pc-t-placa {
-    font-size: 16pt;
-    font-weight: bold;
-    letter-spacing: 2px;
-  }
-  .pc-t-qr {
-    display: block;
-    width: 70%;
-    margin: 2mm auto;
-  }
-  .pc-t-pie {
-    font-size: 8pt;
-  }
-}
-</style>

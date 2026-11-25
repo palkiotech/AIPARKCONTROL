@@ -224,6 +224,11 @@ check('recibir turno registra diferencia de recepción', rec.diferencia_recepcio
 await como(AD, () => q(`select public.cerrar_turno_sin_relevo($1, 19000, 'cierre noche')`, [rec.nuevo_turno_id]))
 check('cerrar sin relevo deja sin turno activo', (await q(`select count(*)::int n from public.turnos_caja where parqueadero_id=$1 and estado<>'cerrado'`, [pqA]))[0].n === 0)
 
+console.log('\n== Modo de ticket')
+const modo = await como(AD, async () => (await q(`update public.parqueaderos set modo_ticket='impresora' where id=$1 returning modo_ticket`, [pqA]))[0]?.modo_ticket)
+check('admin puede elegir ticket en impresora normal', modo === 'impresora', String(modo))
+await esperaError('modo de ticket desconocido falla', () => como(AD, () => q(`update public.parqueaderos set modo_ticket='fax' where id=$1`, [pqA])), 'modo_ticket')
+
 console.log('\n== Limpieza automática (keep_alive)')
 await q(`insert into public.operaciones_sync(id, parqueadero_id, tipo, payload, creada_en_dispositivo_at, procesada_at, resultado) values
   ('44444444-4444-4444-8444-444444444441', $1, 'entrada', '{}', now() - interval '100 days', now() - interval '100 days', 'ok'),

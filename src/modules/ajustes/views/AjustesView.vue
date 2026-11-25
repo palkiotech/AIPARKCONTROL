@@ -300,8 +300,11 @@
           </div>
           <div class="flex flex-col sm:flex-row gap-2">
             <button type="submit" class="btn-craft-primary text-sm px-4 py-2.5 sm:py-2 rounded-lg">{{ guardando ? 'Guardando...' : 'Guardar ticket' }}</button>
-            <button v-if="negocio.modo_ticket === 'termica'" type="button" @click="imprimirPrueba" class="btn-craft-subtle text-sm px-4 py-2.5 sm:py-2 rounded-lg">Imprimir prueba</button>
+            <button v-if="negocio.modo_ticket === 'termica' || negocio.modo_ticket === 'impresora'" type="button" @click="imprimirPrueba" class="btn-craft-subtle text-sm px-4 py-2.5 sm:py-2 rounded-lg">Imprimir prueba</button>
           </div>
+          <p v-if="negocio.modo_ticket === 'impresora'" class="alerta-info">
+            Al imprimir se abre el diálogo de impresión del equipo: elija allí su impresora WiFi o Bluetooth. En Android puede requerir el servicio de impresión del fabricante (Mopria); en iPhone y iPad, una impresora compatible con AirPrint.
+          </p>
         </fieldset>
       </form>
 
@@ -310,17 +313,9 @@
         <div v-if="negocio.modo_ticket === 'ninguno'" class="vacio">
           Sin ticket: la salida se hace consultando la placa.
         </div>
-        <div v-else class="mx-auto max-w-full break-words bg-white text-black font-mono text-2xs p-3 shadow-sm border border-black/10 rounded-sm space-y-1"
-          :style="{ width: negocio.modo_ticket === 'termica' && negocio.ancho_ticket_mm === 58 ? '200px' : '270px' }">
-          <p class="text-center font-bold text-xs">{{ negocio.nombre || 'Parqueadero' }}</p>
-          <p class="text-center">NIT {{ negocio.nit || '—' }}</p>
-          <hr class="border-dashed border-black/40" />
-          <p class="text-center text-base font-bold tracking-widest">ABC123</p>
-          <p>Tipo: {{ tiposActivos[0]?.nombre || 'Carro' }}</p>
-          <p>Entrada: {{ ahoraTexto }}</p>
-          <p>Tarifa: {{ tarifaEjemplo }}</p>
-          <img v-if="qrPrueba" :src="qrPrueba" alt="QR de prueba" class="mx-auto w-24 h-24" />
-          <p v-if="negocio.texto_pie_comprobante" class="text-center text-2xs">{{ negocio.texto_pie_comprobante }}</p>
+        <div v-else class="overflow-x-auto">
+          <!-- El mismo HTML que se imprime (src/lib/ticketImpresion.js) -->
+          <div class="mx-auto w-fit bg-white p-3 rounded-sm shadow-sm border border-black/10" v-html="htmlVistaPrevia"></div>
         </div>
       </div>
     </div>
@@ -510,6 +505,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useConexionStore } from '@/stores/conexion'
 import { useTemaStore } from '@/stores/tema'
 import { mensajeDeError } from '@/lib/sesionCaches'
+import { construirHtmlTicket, imprimirTicket, instalarEstiloTicket, textoTarifa } from '@/lib/ticketImpresion'
 import IconoVehiculo from '@/components/IconoVehiculo.vue'
 import { instanteDesdeLocal, hoyEnZona, formatearFechaCorta, formatearFechaHora } from '@/utils/fecha'
 
@@ -538,6 +534,7 @@ const ZONAS = [
 ]
 const MODOS_TICKET = [
   { id: 'qr', label: 'QR en pantalla', ayuda: 'El cliente toma foto del QR. Recomendado si no hay impresora.' },
+  { id: 'impresora', label: 'Impresora normal (láser o tinta)', ayuda: 'Imprime el ticket en hoja carta o A4 para recortar. Sirve cualquier impresora WiFi, Bluetooth o USB que el equipo ya tenga agregada.' },
   { id: 'termica', label: 'Impresora térmica', ayuda: 'Imprime el ticket de 58 u 80 mm (requiere el driver de la impresora).' },
   { id: 'ninguno', label: 'Sin ticket', ayuda: 'No se entrega ticket; la salida se hace por placa.' }
 ]
@@ -933,47 +930,41 @@ const qrPrueba = ref('')
 const ahoraTexto = computed(() => formatearFechaHora(new Date(), authStore.zonaHoraria, { year: 'numeric' }))
 const tarifaEjemplo = computed(() => {
   const t = tarifas.value.find(x => x.tipo_vehiculo_id === tiposActivos.value[0]?.id && x.es_predeterminada && x.activa)
-  return t ? `${t.nombre} (${pesos(t.valor)})` : 'Por hora'
+  return t ? textoTarifa(t) : 'Por hora'
 })
 
 async function generarQrPrueba() {
   try {
-    qrPrueba.value = await QRCode.toDataURL('PARKCONTROL-TICKET-PRUEBA', { margin: 1, width: 160 })
+    qrPrueba.value = await QRCode.toDataURL('PARKCONTROL-TICKET-PRUEBA', { margin: 1, width: 320 })
   } catch (e) {
     qrPrueba.value = ''
   }
 }
 
-function escapar(s) {
-  return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-}
-
-function imprimirPrueba() {
-  const ancho = negocio.value.ancho_ticket_mm === 58 ? 58 : 80
-  const ventana = window.open('', '_blank', 'width=420,height=640')
-  if (!ventana) {
-    fallar(new Error('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para este sitio.'))
-    return
+function datosTicketPrueba() {
+  return {
+    parqueadero: { ...authStore.parqueadero, ...negocio.value },
+    placa: 'ABC123',
+    tipoNombre: tiposActivos.value[0]?.nombre || 'Carro',
+    entradaTexto: ahoraTexto.value,
+    tarifaTexto: tarifaEjemplo.value,
+    referencia: 'PRUEBA01',
+    qr: qrPrueba.value,
+    prueba: true
   }
-  ventana.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Ticket de prueba</title>
-    <style>
-      @page { size: ${ancho}mm auto; margin: 0; }
-      body { width: ${ancho - 4}mm; margin: 0 2mm; font-family: monospace; font-size: ${ancho === 58 ? 10 : 12}px; color: #000; }
-      .c { text-align: center; } .b { font-weight: bold; } .placa { font-size: 1.6em; letter-spacing: 2px; }
-      hr { border: 0; border-top: 1px dashed #000; } img { display: block; margin: 4px auto; width: ${ancho === 58 ? 30 : 40}mm; }
-    </style></head><body>
-    <p class="c b">${escapar(negocio.value.nombre || 'Parqueadero')}</p>
-    <p class="c">NIT ${escapar(negocio.value.nit || '')}</p><hr>
-    <p class="c b placa">ABC123</p>
-    <p>Tipo: ${escapar(tiposActivos.value[0]?.nombre || 'Carro')}</p>
-    <p>Entrada: ${escapar(ahoraTexto.value)}</p>
-    <p>Tarifa: ${escapar(tarifaEjemplo.value)}</p>
-    ${qrPrueba.value ? `<img src="${qrPrueba.value}" alt="QR">` : ''}
-    <p class="c">*** TICKET DE PRUEBA ***</p>
-    ${negocio.value.texto_pie_comprobante ? `<p class="c">${escapar(negocio.value.texto_pie_comprobante)}</p>` : ''}
-    <script>window.onload = function () { window.print(); setTimeout(function () { window.close(); }, 500); };<\/script>
-    </body></html>`)
-  ventana.document.close()
+}
+const opcionesTicket = computed(() => ({
+  formato: negocio.value.modo_ticket === 'termica' ? 'termica' : 'hoja',
+  ancho: negocio.value.ancho_ticket_mm === 58 ? 58 : 80
+}))
+const htmlVistaPrevia = computed(() => construirHtmlTicket(datosTicketPrueba(), opcionesTicket.value))
+
+async function imprimirPrueba() {
+  try {
+    await imprimirTicket(datosTicketPrueba(), opcionesTicket.value)
+  } catch (e) {
+    fallar(e)
+  }
 }
 
 // --- Utilidades ---
@@ -994,7 +985,10 @@ watch(pqId, (nuevo) => { if (nuevo) cargarTodo() })
 
 // La vista vive en <keep-alive>: onActivated también corre en el primer montaje,
 // así que la carga va solo ahí (antes se cargaba dos veces al entrar).
-onMounted(generarQrPrueba)
+onMounted(() => {
+  generarQrPrueba()
+  instalarEstiloTicket()
+})
 onActivated(cargarTodo)
 onBeforeUnmount(liberarPreview)
 </script>
